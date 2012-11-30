@@ -62,8 +62,46 @@ def match_paras(para_list_1, para_list_2):
     return para_match_list
 
 
+def intersect_percentages(t_sig, i_sig):
+    intersection = t_sig & i_sig
+    t_match_perc = len(intersection) * 100 / len(t_sig)
+    i_match_perc = len(intersection) * 100 / len(i_sig)
+    return (t_match_perc, i_match_perc)
+
+
 def fuzzy_match_paras(t_paras, i_paras):
-    pass
+    """Find matches in the t_paras list and i_paras list. The sigs in these lists may be None if an
+    exact matches have already been made."""
+    match_list = []
+    for ct, pt in enumerate(t_paras):
+        if not pt[0]: continue
+        for ci, pi in enumerate(i_paras):
+            if not pi[0]: continue
+            int_percs = intersect_percentages(pt[0], pi[0])
+            if min(*int_percs) < 30 or max(*int_percs) < 90: #somewhat certain there is no match
+                continue
+            match_list.append([[ct], [ci], int_percs])
+    #process joins and splits
+    c = 0
+    while c + 1 < len(match_list):
+        #detect and process join case
+        if (match_list[c][0][0] == match_list[c + 1][0][0] and
+            match_list[c][1][-1] + 1 == match_list[c + 1][1][-1]):
+            t_candidate = match_list[c][0]
+            i_candidate = match_list[c][1] + match_list[c + 1][1]
+            t_candidate_sig = set()
+            for i in t_candidate:
+                t_candidate_sig |= t_paras[i][0]
+            i_candidate_sig = set()
+            for i in i_candidate:
+                i_candidate_sig |= i_paras[i][0]
+            int_percs = intersect_percentages(t_candidate_sig, i_candidate_sig)
+            if min(*int_percs) >= 90:
+                match_list[c + 1] = [t_candidate, i_candidate, int_percs]
+                match_list[c] = None
+        c += 1
+    return match_list
+
 
 
 def main():
@@ -95,5 +133,6 @@ def main():
         t_fuzzy = t_para_list[start[0]:end[0]]
         i_fuzzy = i_para_list[start[1]:end[1]]
         fuzzy_matches = fuzzy_match_paras(t_fuzzy, i_fuzzy)
+        print start, fuzzy_matches, end
 
 main()
