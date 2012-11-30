@@ -69,6 +69,16 @@ def intersect_percentages(t_sig, i_sig):
     return (t_match_perc, i_match_perc)
 
 
+def intersect_candidates(t_candidate, t_paras, i_candidate, i_paras):
+    t_candidate_sig = set()
+    for i in t_candidate:
+        t_candidate_sig |= t_paras[i][0]
+    i_candidate_sig = set()
+    for i in i_candidate:
+        i_candidate_sig |= i_paras[i][0]
+    return intersect_percentages(t_candidate_sig, i_candidate_sig)
+
+
 def fuzzy_match_paras(t_paras, i_paras):
     """Find matches in the t_paras list and i_paras list. The sigs in these lists may be None if an
     exact matches have already been made."""
@@ -84,18 +94,22 @@ def fuzzy_match_paras(t_paras, i_paras):
     #process joins and splits
     c = 0
     while c + 1 < len(match_list):
+        #note: need to check these work in more complex cases
         #detect and process join case
-        if (match_list[c][0][0] == match_list[c + 1][0][0] and
+        if (match_list[c][0][-1] == match_list[c + 1][0][0] and
             match_list[c][1][-1] + 1 == match_list[c + 1][1][-1]):
             t_candidate = match_list[c][0]
             i_candidate = match_list[c][1] + match_list[c + 1][1]
-            t_candidate_sig = set()
-            for i in t_candidate:
-                t_candidate_sig |= t_paras[i][0]
-            i_candidate_sig = set()
-            for i in i_candidate:
-                i_candidate_sig |= i_paras[i][0]
-            int_percs = intersect_percentages(t_candidate_sig, i_candidate_sig)
+            int_percs = intersect_candidates(t_candidate, t_paras, i_candidate, i_paras)
+            if min(*int_percs) >= 90:
+                match_list[c + 1] = [t_candidate, i_candidate, int_percs]
+                match_list[c] = None
+        #detect and process split case
+        elif (match_list[c][0][-1] + 1 == match_list[c + 1][0][0] and
+            match_list[c][1][0]  == match_list[c + 1][1][0]):
+            t_candidate = match_list[c][0] + match_list[c + 1][0]
+            i_candidate = match_list[c][1]
+            int_percs = intersect_candidates(t_candidate, t_paras, i_candidate, i_paras)
             if min(*int_percs) >= 90:
                 match_list[c + 1] = [t_candidate, i_candidate, int_percs]
                 match_list[c] = None
@@ -113,19 +127,7 @@ def main():
     t_para_list = split_paras(t_tokens)
     #find exact matches
     exact_matches = match_paras(t_para_list, i_para_list)
-    print exact_matches
-    outstr = ""
-    for c in range(0, max(len(t_para_list), len(i_para_list))):
-        outstr = str(c) + ": "
-        for l in (t_para_list, i_para_list):
-            if c < len(l):
-                if l[c][0]:
-                    outstr += " yes "
-                else:
-                    outstr += "  no "
-            else:
-                outstr += " xxx "
-        print outstr
+    matches = [[[X[0]], [X[1]]] for X in exact_matches]
     for start, end in zip([[-1, -1]] + exact_matches,
                           exact_matches + [[len(t_para_list), len(i_para_list)]]):
         start = [X + 1 for X in start]
@@ -133,6 +135,13 @@ def main():
         t_fuzzy = t_para_list[start[0]:end[0]]
         i_fuzzy = i_para_list[start[1]:end[1]]
         fuzzy_matches = fuzzy_match_paras(t_fuzzy, i_fuzzy)
-        print start, fuzzy_matches, end
+        for fm in fuzzy_matches:
+            if not fm: continue
+            fm[0] = [X + start[0] for X in fm[0]]
+            fm[1] = [X + start[1] for X in fm[1]]
+            matches.append(fm)
+    matches.sort()
+    for m in matches:
+        print m
 
 main()
