@@ -48,14 +48,22 @@ def make_para_dict(para_list):
 
 def match_paras(para_list_1, para_list_2):
     """Find "exact" matches where sigs are equal in para_list_1 and para_list_2. Returns a list of
-    matching indexes of the form [[ind, ind], [ind, ind], ...]"""
+    matching indexes of the form [[ind, ind], [ind, ind], ...]. As a side-effect, the sigs for
+    the matched paras in the two lists are set to None."""
     para_dict = make_para_dict(para_list_2)
     para_match_list = []
     for c, p in enumerate(para_list_1):
         if para_dict.has_key(p[0]) and para_dict[p[0]]:
-            para_match_list.append([c, para_dict[p[0]][0]])
+            d = para_dict[p[0]][0]
+            para_match_list.append([c, d])
             del para_dict[p[0]][0]
+            para_list_1[c][0] = None
+            para_list_2[d][0] = None
     return para_match_list
+
+
+def fuzzy_match_paras(t_paras, i_paras):
+    pass
 
 
 def main():
@@ -68,5 +76,24 @@ def main():
     #find exact matches
     exact_matches = match_paras(t_para_list, i_para_list)
     print exact_matches
+    outstr = ""
+    for c in range(0, max(len(t_para_list), len(i_para_list))):
+        outstr = str(c) + ": "
+        for l in (t_para_list, i_para_list):
+            if c < len(l):
+                if l[c][0]:
+                    outstr += " yes "
+                else:
+                    outstr += "  no "
+            else:
+                outstr += " xxx "
+        print outstr
+    for start, end in zip([[-1, -1]] + exact_matches,
+                          exact_matches + [[len(t_para_list), len(i_para_list)]]):
+        start = [X + 1 for X in start]
+        if end[0] <= start[0] or end[1] <= start[1]: continue
+        t_fuzzy = t_para_list[start[0]:end[0]]
+        i_fuzzy = i_para_list[start[1]:end[1]]
+        fuzzy_matches = fuzzy_match_paras(t_fuzzy, i_fuzzy)
 
 main()
