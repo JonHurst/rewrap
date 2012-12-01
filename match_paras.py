@@ -118,6 +118,20 @@ def fuzzy_match_paras(t_paras, i_paras):
 
 
 
+def process_matches(matches, t_para_list, i_para_list):
+    #modify i_para_list for joins
+    for c, m in enumerate(matches):
+        if len(m[1]) > 1:
+            newpara = []
+            for ci in m[1]:
+                newpara += i_para_list[ci][1:]
+                i_para_list[ci] = None
+            common.dump_tokens(newpara, True)
+            newpara.insert(0, sig(newpara))
+            i_para_list[m[1][0]] = newpara
+            matches[c][1] = [m[1][0]]
+
+
 def main():
     #process input file into para list
     i_tokens = tokenise.tokenise(file(input_file).read())
@@ -127,9 +141,10 @@ def main():
     t_para_list = split_paras(t_tokens)
     #find exact matches
     exact_matches = match_paras(t_para_list, i_para_list)
-    matches = [[[X[0]], [X[1]]] for X in exact_matches]
+    matches = []
     for start, end in zip([[-1, -1]] + exact_matches,
                           exact_matches + [[len(t_para_list), len(i_para_list)]]):
+        matches.append([[X] for  X in start])
         start = [X + 1 for X in start]
         if end[0] <= start[0] or end[1] <= start[1]: continue
         t_fuzzy = t_para_list[start[0]:end[0]]
@@ -140,8 +155,9 @@ def main():
             fm[0] = [X + start[0] for X in fm[0]]
             fm[1] = [X + start[1] for X in fm[1]]
             matches.append(fm)
-    matches.sort()
-    for m in matches:
-        print m
+    del matches[0]
+    for m in matches: print m
+    process_matches(matches, t_para_list, i_para_list)
+    for m in matches: print m
 
 main()
