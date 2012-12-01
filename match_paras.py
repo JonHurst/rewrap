@@ -4,6 +4,8 @@
 import tokenise
 import sys
 import common
+import difflib
+import filters
 
 template_file = "template"
 input_file = "input"
@@ -117,19 +119,54 @@ def fuzzy_match_paras(t_paras, i_paras):
     return match_list
 
 
+def break_para(para, l_para, r_para):
+    #determine window within which to find break
+    #strip sigs
+    (para, l_para, r_para) = [X[1:] for X in (para, l_para, r_para)]
+    #normalize linebreaks
+    filters.run_filters(para, (filters.linebreak_to_space,))
+    filters.run_filters(l_para, (filters.linebreak_to_space,))
+    filters.run_filters(r_para, (filters.linebreak_to_space,))
+    #determine most likely break point
+    mid = len(para) * len(l_para)/(len(l_para) + len(r_para))
+    sm = difflib.SequenceMatcher()
+    sm.set_seqs([tuple(X) for X in para[mid - 10:mid + 10]],
+                 [tuple(X) for X in l_para[-10:] + r_para[:10]])
+    mb = sm.get_matching_blocks()
+    l = len(l_para[-10:]); c = 0;
+    while mb[c][1] < l: c += 1
+    breakpoint = mid
+    if c:
+        breakpoint = mid - 10 + mb[c - 1][0] + l
+    return para[:breakpoint], para[breakpoint:]
+
+
+
 
 def process_matches(matches, t_para_list, i_para_list):
-    #modify i_para_list for joins
+    #modify i_para_list and matches for joins
     for c, m in enumerate(matches):
         if len(m[1]) > 1:
             newpara = []
             for ci in m[1]:
                 newpara += i_para_list[ci][1:]
                 i_para_list[ci] = None
-            common.dump_tokens(newpara, True)
             newpara.insert(0, sig(newpara))
             i_para_list[m[1][0]] = newpara
             matches[c][1] = [m[1][0]]
+    #modify i_para_list and matches for splits
+    new_matches = []
+    for c, m in enumerate(matches):
+        if len(m[0]) > 1:
+            l_para, r_para = break_para(i_para_list[m[1][0]], t_para_list[m[0][0]], t_para_list[m[0][1]])
+            r_para.insert(0, sig(r_para))
+            i_para_list.append(r_para)
+            new_matches.append([m[0][1:], [len(i_para_list) - 1]])
+            l_para.insert(0, sig(l_para))
+            i_para_list[m[1][0]] = l_para
+            matches[c] = [m[0][:1], m[1]]
+    matches += new_matches
+    matches.sort()
 
 
 def main():
@@ -158,6 +195,9 @@ def main():
     del matches[0]
     for m in matches: print m
     process_matches(matches, t_para_list, i_para_list)
-    for m in matches: print m
+    print "-----"
+    for m in matches:
+        common.dump_tokens(i_para_list[m[1][0]][1:], True)
+        print
 
 main()
