@@ -15,12 +15,18 @@ def sig(tokens):
     """Makes a signature for a list of tokens by creating a frozen set consisting of all the words
     lower-cased. This makes signatures quite robust across many of the normal edition differences
     such as punctuation changes and case changes."""
-    return frozenset([t[0].lower() for t in tokens if t[1] == tokenise.TYPE_WORD] or t[1] == tokenise.TYPE_DIGIT)
+    t_applicable = [t for t in tokens if t[1] == tokenise.TYPE_WORD or t[1] == tokenise.TYPE_DIGIT]
+    if not t_applicable:
+        return frozenset()
+    else:
+        return frozenset([t[0].lower() for t in t_applicable])
 
 
 def split_paras(tokens):
     """Split a list of tokens into a list of paragraphs of the form:
     [[sig1, tok1.1, tok1.2...], [sig2, tok2.1, tok2.2, ...], ...]"""
+    if tokens[0][1] == tokenise.TYPE_LINEBREAK:
+        tokens[0][1] = tokenise.TYPE_PARABREAK
     para_list = []
     para = []
     name = ""
