@@ -31,6 +31,9 @@ def split_paras(tokens):
             para = []
         else:
             para.append(t)
+    if para:
+        para.insert(0, sig(para))
+        para_list.append(para)
     return para_list
 
 
