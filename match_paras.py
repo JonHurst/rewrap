@@ -200,8 +200,16 @@ def main():
     process_matches(matches, t_para_list, i_para_list)
     print "-----"
     for m in matches: print m
-    outfile = open(sys.argv[3], "w")
-    for m in matches:
-        common.dump_tokens(i_para_list[m[1][0]][1:], True, outfile)
+    outdict = dict([(X[0][0], X[1][0]) for X in matches])
+    outstrings = []
+    for c in range(0, len(t_para_list)):
+        if outdict.has_key(c):
+            outstrings.append(common.dump_tokens(i_para_list[outdict[c]][1:], True))
+        else:
+            outstrings.append(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" +
+                              common.dump_tokens(t_para_list[c][1:], True)
+                              + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
+    file(sys.argv[3], "w").write("\n".join(outstrings).encode("utf-8"))
+
 
 main()
