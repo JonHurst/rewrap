@@ -34,3 +34,18 @@ echo "Multiple moved paras test"
 ./match_paras.py tests/multi-moved/input tests/multi-moved/template tests/multi-moved/output
 diff -s tests/multi-moved/expected-output tests/multi-moved/output
 echo
+
+echo "Large Change para test"
+./match_paras.py tests/changed/input tests/changed/template tests/changed/output
+diff -s tests/changed/expected-output tests/changed/output
+echo
+
+echo "Join two paras test"
+./match_paras.py tests/join/input tests/join/template tests/join/output
+diff -s tests/join/expected-output tests/join/output
+echo
+
+echo "Join multiple paras test"
+./match_paras.py tests/multi-join/input tests/multi-join/template tests/multi-join/output
+diff -s tests/multi-join/expected-output tests/multi-join/output
+echo
