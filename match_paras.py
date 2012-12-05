@@ -74,21 +74,30 @@ def match_paras(para_list_1, para_list_2):
     return para_match_list
 
 
-def intersect_percentages(t_sig, i_sig):
+def fuzzy_match_p(t_sig, i_sig):
     intersection = t_sig & i_sig
-    t_match_perc = len(intersection) * 100 / len(t_sig)
-    i_match_perc = len(intersection) * 100 / len(i_sig)
-    return (t_match_perc, i_match_perc)
+    max_intersection_len = min(len(t_sig), len(i_sig))
+    #match criteria is 90% of words the same or no more than 1 word wrong,
+    #whichever is lower, excepting the case when there are less than two words
+    if max_intersection_len > 1:
+        match_criteria = 1 - (float(1) / max_intersection_len)
+    else:
+        match_criteria = 0.5
+    match_criteria = min(match_criteria, 0.85)
+    if float(len(intersection))/max_intersection_len < match_criteria :
+        #somewhat certain there is no match
+        return False
+    t_match = float(len(intersection)) / len(t_sig)
+    i_match = float(len(intersection)) / len(i_sig)
+    return (t_match, i_match, match_criteria)
 
 
-def intersect_candidates(t_candidate, t_paras, i_candidate, i_paras):
-    t_candidate_sig = set()
-    for i in t_candidate:
-        t_candidate_sig |= t_paras[i][0]
-    i_candidate_sig = set()
-    for i in i_candidate:
-        i_candidate_sig |= i_paras[i][0]
-    return intersect_percentages(t_candidate_sig, i_candidate_sig)
+def build_candidate(paras, index_list):
+    candidate = []
+    for i in index_list:
+        candidate += paras[i][1:]
+    candidate.insert(0, sig(candidate))
+    return candidate
 
 
 def fuzzy_match_paras(t_paras, i_paras):
@@ -99,25 +108,20 @@ def fuzzy_match_paras(t_paras, i_paras):
         if not pt[0]: continue
         for ci, pi in enumerate(i_paras):
             if not pi[0]: continue
-            int_percs = intersect_percentages(pt[0], pi[0])
-            #match threshold is 10% of average length of sigs, rounded up
-            average_para_len = (len(pt[0]) + len(pi[0]))/2
-            match_threshold = math.ceil(0.1 * average_para_len) * 100 / average_para_len
-            if min(*int_percs) < 30 or max(*int_percs) < 100 - match_threshold: #somewhat certain there is no match
-                continue
-            match_list.append([[ct], [ci], int_percs])
+            match_probs = fuzzy_match_p(pt[0], pi[0])
+            if match_probs:
+                match_list.append([[ct], [ci], match_probs])
     #process joins and splits
     c = 0
     while c + 1 < len(match_list):
-        #note: need to check these work in more complex cases
         #detect and process join case
         if (match_list[c][0][-1] == match_list[c + 1][0][0] and
             match_list[c][1][-1] + 1 == match_list[c + 1][1][-1]):
-            t_candidate = match_list[c][0]
-            i_candidate = match_list[c][1] + match_list[c + 1][1]
-            int_percs = intersect_candidates(t_candidate, t_paras, i_candidate, i_paras)
-            if min(*int_percs) >= 90:
-                match_list[c + 1] = [t_candidate, i_candidate, int_percs]
+            t_candidate = build_candidate(t_paras, match_list[c][0])
+            i_candidate = build_candidate(i_paras, match_list[c][1] + match_list[c + 1][1])
+            match_probs = fuzzy_match_p(t_candidate[0], i_candidate[0])
+            if match_probs and sum(match_probs[:2]) > sum(match_list[c][2][:2]):
+                match_list[c + 1][1:] = [match_list[c][1] + match_list[c + 1][1], match_probs]
                 match_list[c] = None
         #detect and process split case
         elif (match_list[c][0][-1] + 1 == match_list[c + 1][0][0] and
@@ -129,6 +133,10 @@ def fuzzy_match_paras(t_paras, i_paras):
                 match_list[c + 1] = [t_candidate, i_candidate, int_percs]
                 match_list[c] = None
         c += 1
+    #now drop anything where either criteria is below match criteria:
+    for c, m in enumerate(match_list):
+        if m and (m[2][0] < m[2][2] or m[2][1] < m[2][2]):
+            match_list[c] = None
     return match_list
 
 
@@ -152,8 +160,6 @@ def break_para(para, l_para, r_para):
     if c:
         breakpoint = mid - 10 + mb[c - 1][0] + l
     return para[:breakpoint], para[breakpoint:]
-
-
 
 
 def process_matches(matches, t_para_list, i_para_list):
