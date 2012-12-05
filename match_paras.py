@@ -6,6 +6,7 @@ import sys
 import common
 import difflib
 import filters
+import math
 
 template_file = "template"
 input_file = "input"
@@ -99,7 +100,10 @@ def fuzzy_match_paras(t_paras, i_paras):
         for ci, pi in enumerate(i_paras):
             if not pi[0]: continue
             int_percs = intersect_percentages(pt[0], pi[0])
-            if min(*int_percs) < 30 or max(*int_percs) < 90: #somewhat certain there is no match
+            #match threshold is 10% of average length of sigs, rounded up
+            average_para_len = (len(pt[0]) + len(pi[0]))/2
+            match_threshold = math.ceil(0.1 * average_para_len) * 100 / average_para_len
+            if min(*int_percs) < 30 or max(*int_percs) < 100 - match_threshold: #somewhat certain there is no match
                 continue
             match_list.append([[ct], [ci], int_percs])
     #process joins and splits
