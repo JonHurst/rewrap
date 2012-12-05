@@ -174,10 +174,10 @@ def process_matches(matches, t_para_list, i_para_list):
 
 def main():
     #process input file into para list
-    i_tokens = tokenise.tokenise(file(input_file).read())
+    i_tokens = tokenise.tokenise(file(sys.argv[1]).read())
     i_para_list = split_paras(i_tokens)
     #process token file into para list
-    t_tokens = tokenise.tokenise(file(template_file).read())
+    t_tokens = tokenise.tokenise(file(sys.argv[2]).read())
     t_para_list = split_paras(t_tokens)
     #find exact matches
     exact_matches = match_paras(t_para_list, i_para_list)
@@ -199,8 +199,9 @@ def main():
     for m in matches: print m
     process_matches(matches, t_para_list, i_para_list)
     print "-----"
+    for m in matches: print m
+    outfile = open(sys.argv[3], "w")
     for m in matches:
-        common.dump_tokens(i_para_list[m[1][0]][1:], True)
-        print
+        common.dump_tokens(i_para_list[m[1][0]][1:], True, outfile)
 
 main()
