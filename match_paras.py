@@ -121,7 +121,7 @@ def fuzzy_match_paras(t_paras, i_paras):
             i_candidate = build_candidate(i_paras, match_list[c][1] + match_list[c + 1][1])
             match_probs = fuzzy_match_p(t_candidate[0], i_candidate[0])
             if match_probs and sum(match_probs[:2]) > sum(match_list[c][2][:2]):
-                match_list[c + 1][1:] = [match_list[c][1] + match_list[c + 1][1], match_probs]
+                match_list[c + 1] = [match_list[c][0], match_list[c][1] + match_list[c + 1][1], match_probs]
                 match_list[c] = None
         #detect and process split case
         elif (match_list[c][0][-1] + 1 == match_list[c + 1][0][0] and
