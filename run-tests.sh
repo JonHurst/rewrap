@@ -24,3 +24,13 @@ echo "Multiple extra para test"
 ./match_paras.py tests/multi-extra/input tests/multi-extra/template tests/multi-extra/output
 diff -s tests/multi-extra/expected-output tests/multi-extra/output
 echo
+
+echo "Moved para test"
+./match_paras.py tests/moved/input tests/moved/template tests/moved/output
+diff -s tests/moved/expected-output tests/moved/output
+echo
+
+echo "Multiple moved paras test"
+./match_paras.py tests/multi-moved/input tests/multi-moved/template tests/multi-moved/output
+diff -s tests/multi-moved/expected-output tests/multi-moved/output
+echo
