@@ -193,6 +193,7 @@ def process_matches(matches, t_para_list, i_para_list):
             joined_para.insert(0, sig(joined_para))
             i_para_list.append(joined_para)
             matches[c][1] = [len(i_para_list) - 1]
+            matches[c].append("join")
     #modify i_para_list and matches for splits
     new_matches = []
     for c, m in enumerate(matches):
@@ -203,7 +204,10 @@ def process_matches(matches, t_para_list, i_para_list):
             split_paras = break_para(t_paras, i_para_list[m[1][0]])
             for d, i in enumerate(m[0]):
                 i_para_list.append(split_paras[d])
-                new_matches.append([[i], [len(i_para_list) - 1]])
+                match_prob = fuzzy_match_p(t_para_list[i][0], split_paras[d][0])
+                split_description = "bad split"
+                if match_prob: split_description = "split"
+                new_matches.append([[i], [len(i_para_list) - 1], match_prob, split_description])
             matches[c] = None
     matches += new_matches
     matches = [X for X in matches if X]
@@ -232,16 +236,23 @@ def build_match_list(t_para_list, i_para_list):
 
 
 def build_output(t_para_list, i_para_list, matches):
-    outdict = dict([(X[0][0], X[1][0]) for X in matches])
+    outdict, descdict = {}, {}
+    for m in matches:
+        if not outdict.has_key(m[0][0]):#chooses first match if multiples
+            outdict[m[0][0]] = m[1][0]
+            if len(m) == 4: descdict[m[0][0]] = m[3]
     outstrings = []
+    t_strings = []
     for c in range(0, len(t_para_list)):
+        desc = str(c)
+        if descdict.has_key(c):
+            desc += ":" + descdict[c]
         if outdict.has_key(c):
-            outstrings.append(common.dump_tokens(i_para_list[outdict[c]][1:], True))
+            outstrings.append("<" + desc + ">" + common.dump_tokens(i_para_list[outdict[c]][1:], True))
         else:
-            outstrings.append(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" +
-                              common.dump_tokens(t_para_list[c][1:], True)
-                              + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
-    return "\n".join(outstrings)
+            outstrings.append("<" + str(c) + ":insert>" + common.dump_tokens(t_para_list[c][1:], True))
+        t_strings.append("<" + desc + ">" + common.dump_tokens(t_para_list[c][1:], True))
+    return "\n".join(outstrings), "\n".join(t_strings)
 
 
 def main():
@@ -272,11 +283,12 @@ def main():
         sys.exit(-1)
     #process token lists
     matches = build_match_list(t_para_list, i_para_list)
-    for m in matches: print m
     matches = process_matches(matches, t_para_list, i_para_list)
-    print "-----"
     for m in matches: print m
-    file(sys.argv[3], "w").write(build_output(t_para_list, i_para_list, matches).encode("utf-8"))
+    output, marked_template = build_output(t_para_list, i_para_list, matches)
+    file(sys.argv[2] + ".paramatch", "w").write(output.encode("utf-8"))
+    file(sys.argv[2] + ".mtemplate", "w").write(marked_template.encode("utf-8"))
 
 
-main()
+if __name__ == "__main__":
+    main()
