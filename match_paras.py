@@ -74,13 +74,13 @@ def match_paras(para_list_1, para_list_2):
 def fuzzy_match_p(t_sig, i_sig):
     intersection = t_sig & i_sig
     max_intersection_len = min(len(t_sig), len(i_sig))
-    #match criteria is 90% of words the same or no more than 1 word wrong,
+    #match criteria is 80% of words the same or no more than 1 word wrong,
     #whichever is lower, excepting the case when there are less than two words
     if max_intersection_len > 1:
         match_criteria = 1 - (float(1) / max_intersection_len)
     else:
         match_criteria = 0.5
-    match_criteria = min(match_criteria, 0.85)
+    match_criteria = min(match_criteria, 0.8)
     if float(len(intersection))/max_intersection_len < match_criteria :
         #somewhat certain there is no match
         return False
