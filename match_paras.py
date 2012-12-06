@@ -150,23 +150,31 @@ def break_para(t_paras, i_para):
     if len(t_paras) == 1: return [i_para] #recursive terminator
     l_para = t_paras[0]
     r_para = join_paras(t_paras[1:])
-    #set up sequences of tokens
     (i_para, l_para, r_para) = [X[1:] for X in (i_para, l_para, r_para)]
-    mid = len(i_para) * len(l_para)/(len(l_para) + len(r_para))
-    i_para_seq = i_para[mid - 10:mid + 10]
+    #calculate window size
+    length_dif = len(i_para) - len(l_para) - len(r_para)
+    if length_dif > 0:
+        window_start = int(0.8 * len(l_para))
+        window_end = int(1.2 * len(l_para)) + length_dif
+    else:
+        window_start = int(0.8 * len(l_para)) + length_dif #nb length_dif negative here
+        window_start = max(window_start, 0)
+        window_end = int(1.2 * len(l_para))
+    #set up sequences of tokens
+    i_para_seq = i_para[window_start:window_end]
     filters.linebreak_to_space(i_para_seq)
     i_para_seq = [tuple(X) for X in i_para_seq]
-    t_para_seq = l_para[-10:] + r_para[:10]
+    t_para_seq = (l_para + r_para)[window_start:window_end]
     filters.linebreak_to_space(t_para_seq)
     t_para_seq = [tuple(X) for X in t_para_seq]
     #match sequence blocks
-    sm = difflib.SequenceMatcher(None, tuple(i_para_seq), tuple(t_para_seq))
+    sm = difflib.SequenceMatcher(None, tuple(i_para_seq), tuple(t_para_seq), False)
     mb = sm.get_matching_blocks()
     #determine breakpoint
-    l = len(l_para[-10:]); c = 0;
-    while mb[c][1] < l: c += 1
-    breakpoint = mid
-    if c: breakpoint = mid - 10 + mb[c - 1][0] + l
+    c = 0;
+    while mb[c][1] < len(l_para) - window_start: c += 1 #mb[c - 1] is now the last match block inside l_para
+    breakpoint = len(l_para)
+    if c: breakpoint = len(l_para) + mb[c - 1][0] - mb[c - 1][1]
     retval = i_para[:breakpoint]
     while retval and retval[-1][1] in (tokenise.TYPE_SPACE, tokenise.TYPE_LINEBREAK): del retval[-1]
     retval.append(["\n", tokenise.TYPE_LINEBREAK])
