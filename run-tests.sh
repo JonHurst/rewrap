@@ -49,3 +49,13 @@ echo "Join multiple paras test"
 ./match_paras.py tests/multi-join/input tests/multi-join/template tests/multi-join/output
 diff -s tests/multi-join/expected-output tests/multi-join/output
 echo
+
+echo "Split paras test"
+./match_paras.py tests/split/input tests/split/template tests/split/output
+diff -s tests/split/expected-output tests/split/output
+echo
+
+echo "Splits and joins test"
+./match_paras.py tests/split-and-join/input tests/split-and-join/template tests/split-and-join/output
+diff -s tests/split-and-join/expected-output tests/split-and-join/output
+echo
