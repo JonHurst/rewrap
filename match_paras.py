@@ -95,9 +95,8 @@ def fuzzy_match_p(t_sig, i_sig):
 def build_candidate(paras, index_list):
     candidate = []
     for i in index_list:
-        candidate += paras[i][1:]
-    candidate.insert(0, sig(candidate))
-    return candidate
+        candidate.append(paras[i])
+    return join_paras(candidate)
 
 
 def fuzzy_match_paras(t_paras, i_paras):
@@ -116,7 +115,7 @@ def fuzzy_match_paras(t_paras, i_paras):
     while c + 1 < len(match_list):
         #detect and process join case
         if (match_list[c][0][-1] == match_list[c + 1][0][0] and
-            match_list[c][1][-1] + 1 == match_list[c + 1][1][-1]):
+            match_list[c][1][-1] + 1 == match_list[c + 1][1][0]):
             t_candidate = build_candidate(t_paras, match_list[c][0])
             i_candidate = build_candidate(i_paras, match_list[c][1] + match_list[c + 1][1])
             match_probs = fuzzy_match_p(t_candidate[0], i_candidate[0])
@@ -125,12 +124,12 @@ def fuzzy_match_paras(t_paras, i_paras):
                 match_list[c] = None
         #detect and process split case
         elif (match_list[c][0][-1] + 1 == match_list[c + 1][0][0] and
-            match_list[c][1][0]  == match_list[c + 1][1][0]):
-            t_candidate = match_list[c][0] + match_list[c + 1][0]
-            i_candidate = match_list[c][1]
-            int_percs = intersect_candidates(t_candidate, t_paras, i_candidate, i_paras)
-            if min(*int_percs) >= 90:
-                match_list[c + 1] = [t_candidate, i_candidate, int_percs]
+            match_list[c][1][-1]  == match_list[c + 1][1][0]):
+            t_candidate = build_candidate(t_paras, match_list[c][0] + match_list[c + 1][0])
+            i_candidate = build_candidate(i_paras, match_list[c][1])
+            match_probs = fuzzy_match_p(t_candidate[0], i_candidate[0])
+            if match_probs and sum(match_probs[:2]) > sum(match_list[c][2][:2]):
+                match_list[c + 1] = [match_list[c][0] + match_list[c + 1][0], match_list[c][1], match_probs]
                 match_list[c] = None
         c += 1
     #now drop anything where either criteria is below match criteria:
@@ -140,52 +139,72 @@ def fuzzy_match_paras(t_paras, i_paras):
     return match_list
 
 
-def break_para(para, l_para, r_para):
-    #determine window within which to find break
-    #strip sigs
-    (para, l_para, r_para) = [X[1:] for X in (para, l_para, r_para)]
-    #normalize linebreaks
-    filters.run_filters(para, (filters.linebreak_to_space,))
-    filters.run_filters(l_para, (filters.linebreak_to_space,))
-    filters.run_filters(r_para, (filters.linebreak_to_space,))
-    #determine most likely break point
-    mid = len(para) * len(l_para)/(len(l_para) + len(r_para))
-    sm = difflib.SequenceMatcher()
-    sm.set_seqs([tuple(X) for X in para[mid - 10:mid + 10]],
-                 [tuple(X) for X in l_para[-10:] + r_para[:10]])
+def join_paras(para_list):
+    """Turns para_list into a single para"""
+    para = []
+    for p in para_list:
+        para += p[1:]
+    para.insert(0, sig(para))
+    return para
+
+
+def break_para(t_paras, i_para):
+    """Breaks i_para into a list of paras that approximately match those in the t_paras list"""
+    if len(t_paras) == 1: return [i_para] #recursive terminator
+    l_para = t_paras[0]
+    r_para = join_paras(t_paras[1:])
+    #set up sequences of tokens
+    (i_para, l_para, r_para) = [X[1:] for X in (i_para, l_para, r_para)]
+    mid = len(i_para) * len(l_para)/(len(l_para) + len(r_para))
+    i_para_seq = i_para[mid - 10:mid + 10]
+    filters.linebreak_to_space(i_para_seq)
+    i_para_seq = [tuple(X) for X in i_para_seq]
+    t_para_seq = l_para[-10:] + r_para[:10]
+    filters.linebreak_to_space(t_para_seq)
+    t_para_seq = [tuple(X) for X in t_para_seq]
+    #match sequence blocks
+    sm = difflib.SequenceMatcher(None, tuple(i_para_seq), tuple(t_para_seq))
     mb = sm.get_matching_blocks()
+    #determine breakpoint
     l = len(l_para[-10:]); c = 0;
     while mb[c][1] < l: c += 1
     breakpoint = mid
-    if c:
-        breakpoint = mid - 10 + mb[c - 1][0] + l
-    return para[:breakpoint], para[breakpoint:]
+    if c: breakpoint = mid - 10 + mb[c - 1][0] + l
+    retval = i_para[:breakpoint]
+    while retval and retval[-1][1] in (tokenise.TYPE_SPACE, tokenise.TYPE_LINEBREAK): del retval[-1]
+    retval.append(["\n", tokenise.TYPE_LINEBREAK])
+    retval.insert(0, sig(retval))
+    rem = i_para[breakpoint:]
+    rem.insert(0, sig(rem))
+    return [retval] + break_para(t_paras[1:], rem) #recursive call
 
 
 def process_matches(matches, t_para_list, i_para_list):
     #modify i_para_list and matches for joins
     for c, m in enumerate(matches):
         if len(m[1]) > 1:
-            newpara = []
+            joined_para = []
             for ci in m[1]:
-                newpara += i_para_list[ci][1:]
-                i_para_list[ci] = None
-            newpara.insert(0, sig(newpara))
-            i_para_list[m[1][0]] = newpara
-            matches[c][1] = [m[1][0]]
+                joined_para += i_para_list[ci][1:]
+            joined_para.insert(0, sig(joined_para))
+            i_para_list.append(joined_para)
+            matches[c][1] = [len(i_para_list) - 1]
     #modify i_para_list and matches for splits
     new_matches = []
     for c, m in enumerate(matches):
         if len(m[0]) > 1:
-            l_para, r_para = break_para(i_para_list[m[1][0]], t_para_list[m[0][0]], t_para_list[m[0][1]])
-            r_para.insert(0, sig(r_para))
-            i_para_list.append(r_para)
-            new_matches.append([m[0][1:], [len(i_para_list) - 1]])
-            l_para.insert(0, sig(l_para))
-            i_para_list[m[1][0]] = l_para
-            matches[c] = [m[0][:1], m[1]]
+            t_paras = []
+            for i in m[0]:
+                t_paras.append(t_para_list[i])
+            split_paras = break_para(t_paras, i_para_list[m[1][0]])
+            for d, i in enumerate(m[0]):
+                i_para_list.append(split_paras[d])
+                new_matches.append([[i], [len(i_para_list) - 1]])
+            matches[c] = None
     matches += new_matches
+    matches = [X for X in matches if X]
     matches.sort()
+    return matches
 
 
 def main():
@@ -213,7 +232,7 @@ def main():
             matches.append(fm)
     del matches[0]
     for m in matches: print m
-    process_matches(matches, t_para_list, i_para_list)
+    matches = process_matches(matches, t_para_list, i_para_list)
     print "-----"
     for m in matches: print m
     outdict = dict([(X[0][0], X[1][0]) for X in matches])
