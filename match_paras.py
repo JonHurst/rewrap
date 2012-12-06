@@ -204,14 +204,7 @@ def process_matches(matches, t_para_list, i_para_list):
     return matches
 
 
-def main():
-    #process input file into para list
-    i_tokens = tokenise.tokenise(file(sys.argv[1]).read())
-    i_para_list = split_paras(i_tokens)
-    #process token file into para list
-    t_tokens = tokenise.tokenise(file(sys.argv[2]).read())
-    t_para_list = split_paras(t_tokens)
-    #find exact matches
+def build_match_list(t_para_list, i_para_list):
     exact_matches = match_paras(t_para_list, i_para_list)
     matches = []
     for start, end in zip([[-1, -1]] + exact_matches,
@@ -228,10 +221,10 @@ def main():
             fm[1] = [X + start[1] for X in fm[1]]
             matches.append(fm)
     del matches[0]
-    for m in matches: print m
-    matches = process_matches(matches, t_para_list, i_para_list)
-    print "-----"
-    for m in matches: print m
+    return matches
+
+
+def build_output(t_para_list, i_para_list, matches):
     outdict = dict([(X[0][0], X[1][0]) for X in matches])
     outstrings = []
     for c in range(0, len(t_para_list)):
@@ -241,7 +234,23 @@ def main():
             outstrings.append(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" +
                               common.dump_tokens(t_para_list[c][1:], True)
                               + ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
-    file(sys.argv[3], "w").write("\n".join(outstrings).encode("utf-8"))
+    return "\n".join(outstrings)
+
+
+def main():
+    #process input file into para list
+    i_tokens = tokenise.tokenise(file(sys.argv[1]).read())
+    i_para_list = split_paras(i_tokens)
+    #process token file into para list
+    t_tokens = tokenise.tokenise(file(sys.argv[2]).read())
+    t_para_list = split_paras(t_tokens)
+    #find exact matches
+    matches = build_match_list(t_para_list, i_para_list)
+    for m in matches: print m
+    matches = process_matches(matches, t_para_list, i_para_list)
+    print "-----"
+    for m in matches: print m
+    file(sys.argv[3], "w").write(build_output(t_para_list, i_para_list, matches).encode("utf-8"))
 
 
 main()
