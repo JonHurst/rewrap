@@ -10,14 +10,13 @@ token_description = [
 "Linebreak", "Parabreak", "Pagebreak" ]
 
 
-def tokenise(text, pagemarkers=False):
+def tokenise(text):
     tokens = []
     regexp_notes = re.compile(r"(\[\*\*[^\]]*\])", re.UNICODE)
     regexp_words = re.compile(r"([^\W_]+)", re.UNICODE)
     regexp_digits = re.compile(r"([\d]+)", re.UNICODE)
     regexp_breaks = re.compile(r"(\n+)", re.UNICODE)
     regexp_whitespace = re.compile(r"([\s]+)", re.UNICODE)
-    regexp_pagemarker = re.compile(r"(\%\%page[^\n]*\n)", re.UNICODE)
 
     def process_digits(text):
         text_sections = regexp_digits.split(text)
@@ -62,16 +61,5 @@ def tokenise(text, pagemarkers=False):
             else:
                 process_words(s)
 
-    def process_pagemarkers(text):
-        text_sections = regexp_pagemarker.split(text)
-        for c, s in enumerate(text_sections):
-            if c % 2:
-                tokens.append([s, TYPE_PAGEMARKER])
-            else:
-                process_notes(s)
-
-    if pagemarkers:
-        process_pagemarkers(text)
-    else:
-        process_notes(text)
+    process_notes(text)
     return [X for X in tokens if len(X[0])]
