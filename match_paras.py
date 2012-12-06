@@ -60,8 +60,7 @@ def make_para_dict(para_list):
 
 def match_paras(para_list_1, para_list_2):
     """Find "exact" matches where sigs are equal in para_list_1 and para_list_2. Returns a list of
-    matching indexes of the form [[ind, ind], [ind, ind], ...]. As a side-effect, the sigs for
-    the matched paras in the two lists are set to None."""
+    matching indexes of the form [[ind, ind], [ind, ind], ...]."""
     para_dict = make_para_dict(para_list_2)
     para_match_list = []
     for c, p in enumerate(para_list_1):
@@ -69,8 +68,6 @@ def match_paras(para_list_1, para_list_2):
             d = para_dict[p[0]][0]
             para_match_list.append([c, d])
             del para_dict[p[0]][0]
-            para_list_1[c][0] = None
-            para_list_2[d][0] = None
     return para_match_list
 
 
