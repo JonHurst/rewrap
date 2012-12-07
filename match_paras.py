@@ -10,6 +10,7 @@ import math
 import glob
 import os.path
 
+match_criteria = 0.85
 
 def sig(tokens):
     """Makes a signature for a list of tokens by creating a frozen set consisting of all the words
@@ -73,19 +74,11 @@ def match_paras(para_list_1, para_list_2):
 def fuzzy_match_p(t_sig, i_sig):
     intersection = t_sig & i_sig
     max_intersection_len = min(len(t_sig), len(i_sig))
-    #match criteria is 80% of words the same or no more than 1 word wrong,
-    #whichever is lower, excepting the case when there are less than two words
-    if max_intersection_len > 1:
-        match_criteria = 1 - (float(1) / max_intersection_len)
-    else:
-        match_criteria = 0.5
-    match_criteria = min(match_criteria, 0.8)
-    if float(len(intersection))/max_intersection_len < match_criteria :
-        #somewhat certain there is no match
-        return False
+    #match criteria is global set at the top of this file
+    if float(len(intersection))/max_intersection_len < match_criteria : return False
     t_match = float(len(intersection)) / len(t_sig)
     i_match = float(len(intersection)) / len(i_sig)
-    return (t_match, i_match, match_criteria)
+    return (t_match, i_match)
 
 
 def build_candidate(paras, index_list):
@@ -130,7 +123,7 @@ def fuzzy_match_paras(t_paras, i_paras):
         c += 1
     #now drop anything where either criteria is below match criteria:
     for c, m in enumerate(match_list):
-        if m and (m[2][0] < m[2][2] or m[2][1] < m[2][2]):
+        if m and (min(*m[2]) < match_criteria):
             match_list[c] = None
     return match_list
 
@@ -205,9 +198,8 @@ def process_matches(matches, t_para_list, i_para_list):
             for d, i in enumerate(m[0]):
                 i_para_list.append(split_paras[d])
                 match_prob = fuzzy_match_p(t_para_list[i][0], split_paras[d][0])
-                split_description = "bad split"
-                if match_prob: split_description = "split"
-                new_matches.append([[i], [len(i_para_list) - 1], match_prob, split_description])
+                if match_prob and min(*match_prob) >= match_criteria:
+                    new_matches.append([[i], [len(i_para_list) - 1], match_prob])
             matches[c] = None
     matches += new_matches
     matches = [X for X in matches if X]
