@@ -256,31 +256,15 @@ def build_output(t_para_list, i_para_list, matches):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print "Usage: %s template_file_or_dir input_file" % sys.argv[0]
-        sys.exit(0)
-    #process template file(s) into para list
-    if os.path.isdir(sys.argv[1]):
-        t_files = glob.glob(sys.argv[1] + "/*")
-        t_tokens = []
-        for f in t_files:
-            f_tokens = tokenise.tokenise(unicode(file(f).read(), "utf-8"))
-            if f_tokens[0][1] == tokenise.TYPE_LINEBREAK:
-                f_tokens[0][1] = tokenise.TYPE_PARABREAK
-            t_tokens += f_tokens
-    elif os.path.isfile(sys.argv[1]):
-        t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
-    else:
-        print sys.argv[1], "is not a file or directory"
+    if len(sys.argv) != 3 or not os.path.isfile(sys.argv[1]) or not os.path.isfile(sys.argv[2]):
+        print "Usage: %s template_file input_file" % sys.argv[0]
         sys.exit(-1)
+    #process template file(s) into para list
+    t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
     t_para_list = split_paras(t_tokens)
     #process input file into para list
-    if os.path.isfile(sys.argv[2]):
-        i_tokens = tokenise.tokenise(unicode(file(sys.argv[2]).read(), "utf-8"))
-        i_para_list = split_paras(i_tokens)
-    else:
-        print sys.argv[2], "is not a file or directory"
-        sys.exit(-1)
+    i_tokens = tokenise.tokenise(unicode(file(sys.argv[2]).read(), "utf-8"))
+    i_para_list = split_paras(i_tokens)
     #process token lists
     matches = build_match_list(t_para_list, i_para_list)
     matches = process_matches(matches, t_para_list, i_para_list)
