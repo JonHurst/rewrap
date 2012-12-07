@@ -66,7 +66,7 @@ def match_paras(para_list_1, para_list_2):
     for c, p in enumerate(para_list_1):
         if para_dict.has_key(p[0]) and para_dict[p[0]]:
             d = para_dict[p[0]][0]
-            para_match_list.append([c, d])
+            para_match_list.append([c, d, (1.0, 1.0)])
             del para_dict[p[0]][0]
     return para_match_list
 
@@ -165,8 +165,16 @@ def break_para(t_paras, i_para):
     #determine breakpoint
     c = 0;
     while mb[c][1] < len(l_para) - window_start: c += 1 #mb[c - 1] is now the last match block inside l_para
-    breakpoint = len(l_para)
-    if c: breakpoint = len(l_para) + mb[c - 1][0] - mb[c - 1][1]
+    breakpoint = len(l_para) + mb[c - 1][0] - mb[c - 1][1]
+    if mb[c - 1][1] + mb[c - 1][2] + 1 < len(l_para) - window_start:
+        print "[Warning: Paragraph split occurred outside match block]"
+        error_tokens = i_para[max(0, breakpoint - 20):breakpoint]
+        print "=============================="
+        print common.dump_tokens(error_tokens, True).encode("utf-8")
+        print "------------------------------"
+        error_tokens = l_para[-20:]
+        print common.dump_tokens(error_tokens, True).encode("utf-8")
+        print "==============================\n"
     retval = i_para[:breakpoint]
     while retval and retval[-1][1] in (tokenise.TYPE_SPACE, tokenise.TYPE_LINEBREAK): del retval[-1]
     retval.append(["\n", tokenise.TYPE_LINEBREAK])
@@ -186,7 +194,6 @@ def process_matches(matches, t_para_list, i_para_list):
             joined_para.insert(0, sig(joined_para))
             i_para_list.append(joined_para)
             matches[c][1] = [len(i_para_list) - 1]
-            matches[c].append("join")
     #modify i_para_list and matches for splits
     new_matches = []
     for c, m in enumerate(matches):
@@ -213,7 +220,7 @@ def build_match_list(t_para_list, i_para_list):
     for start, end in zip([[-1, -1]] + exact_matches,
                           exact_matches + [[len(t_para_list), len(i_para_list)]]):
         matches.append([[X] for  X in start])
-        start = [X + 1 for X in start]
+        start = [X + 1 for X in start[:2]]
         if end[0] <= start[0] or end[1] <= start[1]: continue
         t_fuzzy = t_para_list[start[0]:end[0]]
         i_fuzzy = i_para_list[start[1]:end[1]]
@@ -228,23 +235,22 @@ def build_match_list(t_para_list, i_para_list):
 
 
 def build_output(t_para_list, i_para_list, matches):
-    outdict, descdict = {}, {}
+    outdict = {}
     for m in matches:
         if not outdict.has_key(m[0][0]):#chooses first match if multiples
             outdict[m[0][0]] = m[1][0]
-            if len(m) == 4: descdict[m[0][0]] = m[3]
     outstrings = []
-    t_strings = []
+    t_count, i_count = 0, 0
     for c in range(0, len(t_para_list)):
         desc = str(c)
-        if descdict.has_key(c):
-            desc += ":" + descdict[c]
         if outdict.has_key(c):
-            outstrings.append("<" + desc + ">" + common.dump_tokens(i_para_list[outdict[c]][1:], True))
+            outstrings.append(common.dump_tokens(i_para_list[outdict[c]][1:], True))
+            i_count += len(i_para_list[outdict[c]][1:])
         else:
-            outstrings.append("<" + str(c) + ":insert>" + common.dump_tokens(t_para_list[c][1:], True))
-        t_strings.append("<" + desc + ">" + common.dump_tokens(t_para_list[c][1:], True))
-    return "\n".join(outstrings), "\n".join(t_strings)
+            outstrings.append(common.dump_tokens(t_para_list[c][1:], True))
+            t_count += len(t_para_list[c][1:])
+    print "t_count:", t_count, "i_count:", i_count, "rep_rate:", str(i_count * 100 / (t_count + i_count)) + "%"
+    return "\n".join(outstrings)
 
 
 def main():
@@ -260,10 +266,10 @@ def main():
     #process token lists
     matches = build_match_list(t_para_list, i_para_list)
     matches = process_matches(matches, t_para_list, i_para_list)
-    for m in matches: print m
-    output, marked_template = build_output(t_para_list, i_para_list, matches)
+    for m in matches:
+        print "%04d = %04d : %3d%%" % (m[0][0], m[1][0], int(math.ceil(min(*m[2]) * 100)))
+    output = build_output(t_para_list, i_para_list, matches)
     file(sys.argv[2] + ".paramatch", "w").write(output.encode("utf-8"))
-    file(sys.argv[2] + ".mtemplate", "w").write(marked_template.encode("utf-8"))
 
 
 if __name__ == "__main__":
