@@ -3,12 +3,12 @@
 
 import tokenise
 import sys
-import common
 import difflib
 import filters
 import math
 import glob
 import os.path
+from common import split_paras, sig, dump_tokens
 
 match_criteria = 0.85
 
@@ -23,29 +23,8 @@ def sig(tokens):
         return frozenset([t[0].lower() for t in t_applicable])
 
 
-def split_paras(tokens):
-    """Split a list of tokens into a list of paragraphs of the form:
-    [[sig1, tok1.1, tok1.2...], [sig2, tok2.1, tok2.2, ...], ...]"""
-    if tokens[0][1] == tokenise.TYPE_LINEBREAK:
-        tokens[0][1] = tokenise.TYPE_PARABREAK
-    para_list = []
-    para = []
-    name = ""
-    for t in tokens:
-        if t[1] == tokenise.TYPE_PARABREAK:
-            para.insert(0, sig(para))
-            para_list.append(para)
-            para = []
-        else:
-            para.append(t)
-    if para:
-        para.insert(0, sig(para))
-        para_list.append(para)
-    return para_list
-
-
 def make_para_dict(para_list):
-    """Take a para_list (as output by split_paras) and create a dictionary with the para's sig as
+    """Take a para_list (as output by common.split_paras) and create a dictionary with the para's sig as
     key and the indexes of matching paras as value in the form [index1, ...]. The indexes will be in
     document order."""
     para_dict = {}
@@ -170,10 +149,10 @@ def break_para(t_paras, i_para):
         print "[Warning: Paragraph split occurred outside match block]"
         error_tokens = i_para[max(0, breakpoint - 20):breakpoint]
         print "=============================="
-        print common.dump_tokens(error_tokens, True).encode("utf-8")
+        print dump_tokens(error_tokens, True).encode("utf-8")
         print "------------------------------"
         error_tokens = l_para[-20:]
-        print common.dump_tokens(error_tokens, True).encode("utf-8")
+        print dump_tokens(error_tokens, True).encode("utf-8")
         print "==============================\n"
     retval = i_para[:breakpoint]
     while retval and retval[-1][1] in (tokenise.TYPE_SPACE, tokenise.TYPE_LINEBREAK): del retval[-1]
@@ -244,10 +223,10 @@ def build_output(t_para_list, i_para_list, matches):
     for c in range(0, len(t_para_list)):
         desc = str(c)
         if outdict.has_key(c):
-            outstrings.append(common.dump_tokens(i_para_list[outdict[c]][1:], True))
+            outstrings.append(dump_tokens(i_para_list[outdict[c]][1:], True))
             i_count += len(i_para_list[outdict[c]][1:])
         else:
-            outstrings.append(common.dump_tokens(t_para_list[c][1:], True))
+            outstrings.append(dump_tokens(t_para_list[c][1:], True))
             t_count += len(t_para_list[c][1:])
     print "t_count:", t_count, "i_count:", i_count, "rep_rate:", str(i_count * 100 / (t_count + i_count)) + "%"
     return "\n".join(outstrings)
