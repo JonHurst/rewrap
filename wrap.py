@@ -51,14 +51,24 @@ def build_match_list(t_tokens, i_tokens):
         if t_token_dict.get(key) and i_token_dict.get(key):
             matches.append([c, i_token_dict[key]])
     #ensure matches monotonically increases in both fields
-    #TODO: this needs improving
     c = 1
     while c < len(matches):
-        if matches[c][1] < matches[c - 1][1]:
-            del matches[c]
-            warning("Bad word match: %s" % t_tokens[matches[c][1]][0])
-        else:
-            c += 1
+        #simple test
+        if matches[c][1] < matches[c - 1][1]: break
+        c += 1
+    if c != len(matches):
+        #failed test - do removal
+        matches_copy = matches[:]
+        matches_copy.sort(lambda x,y: x[1] - y[1])
+        c = 0
+        while c < len(matches):
+            if matches[c] != matches_copy[c]:
+                del matches[matches.index(matches_copy[c])]
+                del matches_copy[matches_copy.index(matches[c])]
+                del matches[c]
+                del matches_copy[c]
+            else:
+                c += 1
     return matches
 
 
