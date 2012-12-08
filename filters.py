@@ -10,12 +10,9 @@ def run_filters(tokens, filter_list):
 
 
 def linebreak_to_space(tokens):
-    for c, t in enumerate(tokens[:-1]):
+    for c, t in enumerate(tokens):
         if t[1] == tokenise.TYPE_LINEBREAK:
-            if tokens[c + 1][1] == tokenise.TYPE_SPACE:
-                tokens[c] = ["", tokenise.TYPE_UNKNOWN]
-            else:
-                tokens[c] = [" ", tokenise.TYPE_SPACE]
+            tokens[c] = [" ", tokenise.TYPE_SPACE]
 
 
 def remove_formatting(tokens):
