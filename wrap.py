@@ -13,8 +13,7 @@ import sys
 import os
 import difflib
 import tokenise
-import filters
-from common import split_paras, dump_tokens, sig
+from common import split_paras, dump_tokens, sig, linebreak_to_space
 
 current_para = 0
 
@@ -33,7 +32,7 @@ def warning(s, t_shard=None, i_shard=None):
 def token_dict(tokens):
     token_dict = {}
     for c, t in enumerate(tokens):
-        if t[1] in (tokenise.TYPE_WORD, tokenise.TYPE_DIGIT):
+        if t[1] & (tokenise.TYPE_WORD | tokenise.TYPE_DIGIT):
             key = t[0].lower()
             if token_dict.has_key(key):
                 token_dict[key] = None
@@ -74,15 +73,15 @@ def build_match_list(t_tokens, i_tokens):
 
 def merge_breaks(t_shard, i_shard):
     #if there are no line breaks in the shard, just return the i_shard
-    if tokenise.TYPE_LINEBREAK not in [X[1] for X in t_shard]:
+    if not [X for X in t_shard if X[1] & tokenise.TYPE_LINEBREAK]:
         return i_shard
     #so, there are some linebreaks...
     nt_shard = t_shard[:]
-    filters.linebreak_to_space(nt_shard)
+    linebreak_to_space(nt_shard)
     if i_shard == nt_shard:
         #simple case -- identical shards if you replace the linebreaks with spaces
         for c, t in enumerate(t_shard):
-            if t[1] == tokenise.TYPE_LINEBREAK:
+            if t[1] & tokenise.TYPE_LINEBREAK:
                 i_shard[c] = t
     else:
         #bring in the big guns!
@@ -95,12 +94,12 @@ def merge_breaks(t_shard, i_shard):
             warning("No matches", t_shard, i_shard)
             return i_shard
         for ct, t in enumerate(t_shard):
-            if t[1] == tokenise.TYPE_LINEBREAK:
+            if t[1] & tokenise.TYPE_LINEBREAK:
                 #find the match block after the linebreak
                 for cm, m in enumerate(mb):
                     if m[0] > ct: break
                 if cm == 0:
-                    if ct == 0 and i_shard[0][1] == tokenise.TYPE_SPACE:
+                    if ct == 0 and (i_shard[0][1] & tokenise.TYPE_SPACE):
                         i_shard[0] = t
                     else:
                         warning("No candidate space", t_shard, i_shard)
@@ -110,7 +109,7 @@ def merge_breaks(t_shard, i_shard):
                 elif mb[cm][0] - 1 == ct:
                     #break occurred just prior to matchblock
                     candidate = mb[cm][1] - 1
-                    if i_shard[candidate][1] == tokenise.TYPE_SPACE:
+                    if i_shard[candidate][1] & tokenise.TYPE_SPACE:
                         i_shard[candidate] = t
                     else:
                         warning("No candidate space", t_shard, i_shard)
@@ -123,7 +122,7 @@ def merge_breaks(t_shard, i_shard):
 def wrap_para(t_para, i_para):
     t_tokens, i_tokens = t_para[1:], i_para[1:]
     o_tokens = []
-    filters.linebreak_to_space(i_tokens)
+    linebreak_to_space(i_tokens)
     matches = build_match_list(t_tokens, i_tokens)
     #handle shards before first match
     if not matches: return i_para
@@ -137,9 +136,9 @@ def wrap_para(t_para, i_para):
         if t_shard:
             i_shard = i_tokens[start[1] + 1:end[1]]
             o_tokens += merge_breaks(t_shard, i_shard)
-    if o_tokens[-1][1] == tokenise.TYPE_SPACE:
+    if o_tokens[-1][1] & tokenise.TYPE_SPACE:
         warning("Additional material after final linebreak", t_shard, i_shard)
-        o_tokens[-1] = ("\n", tokenise.TYPE_LINEBREAK)
+        o_tokens[-1] = ("\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK)
     o_tokens.insert(0, sig(o_tokens))
     return o_tokens
 

@@ -4,23 +4,12 @@
 import tokenise
 import sys
 import difflib
-import filters
 import math
 import glob
 import os.path
-from common import split_paras, sig, dump_tokens
+from common import split_paras, sig, dump_tokens, linebreak_to_space
 
 match_criteria = 0.85
-
-def sig(tokens):
-    """Makes a signature for a list of tokens by creating a frozen set consisting of all the words
-    lower-cased. This makes signatures quite robust across many of the normal edition differences
-    such as punctuation changes and case changes."""
-    t_applicable = [t for t in tokens if t[1] == tokenise.TYPE_WORD or t[1] == tokenise.TYPE_DIGIT]
-    if not t_applicable:
-        return frozenset()
-    else:
-        return frozenset([t[0].lower() for t in t_applicable])
 
 
 def make_para_dict(para_list):
@@ -133,10 +122,10 @@ def break_para(t_paras, i_para):
         window_end = int(1.2 * len(l_para))
     #set up sequences of tokens
     i_para_seq = i_para[window_start:window_end]
-    filters.linebreak_to_space(i_para_seq)
+    linebreak_to_space(i_para_seq)
     i_para_seq = [tuple(X) for X in i_para_seq]
     t_para_seq = (l_para + r_para)[window_start:window_end]
-    filters.linebreak_to_space(t_para_seq)
+    linebreak_to_space(t_para_seq)
     t_para_seq = [tuple(X) for X in t_para_seq]
     #match sequence blocks
     sm = difflib.SequenceMatcher(None, tuple(i_para_seq), tuple(t_para_seq), False)
@@ -155,8 +144,8 @@ def break_para(t_paras, i_para):
         print dump_tokens(error_tokens, True).encode("utf-8")
         print "==============================\n"
     retval = i_para[:breakpoint]
-    while retval and retval[-1][1] in (tokenise.TYPE_SPACE, tokenise.TYPE_LINEBREAK): del retval[-1]
-    retval.append(["\n", tokenise.TYPE_LINEBREAK])
+    while retval and (retval[-1][1] & (tokenise.TYPE_SPACE | tokenise.TYPE_LINEBREAK)): del retval[-1]
+    retval.append(["\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK])
     retval.insert(0, sig(retval))
     rem = i_para[breakpoint:]
     rem.insert(0, sig(rem))

@@ -2,12 +2,20 @@
 
 import re
 
-(TYPE_UNKNOWN, TYPE_WORD, TYPE_DIGIT, TYPE_SPACE, TYPE_PUNC, TYPE_NOTE, TYPE_PAGEMARKER,
- TYPE_LINEBREAK, TYPE_PARABREAK, TYPE_PAGEBREAK)= range(10)
+(TYPE_UNKNOWN, TYPE_WORD, TYPE_DIGIT,
+ TYPE_SPACE, TYPE_PUNC, TYPE_NOTE,
+  TYPE_LINEBREAK, TYPE_PARABREAK, TYPE_PAGEBREAK) = (
+    0x00, 0x01, 0x02,
+    0x04, 0x08, 0x10,
+    0x20, 0x40, 0x80)
 
-token_description = [
-"Unknown", "Word", "Digit", "Space", "Punctuation", "Note", "Pagemarker",
-"Linebreak", "Parabreak", "Pagebreak" ]
+token_description = dict(zip(
+    [0x00, 0x01, 0x02,
+    0x04, 0x08, 0x10,
+    0x20, 0x40, 0x80],
+    ["Unknown", "Word", "Digit",
+     "Space", "Punctuation", "Note",
+     "Linebreak", "Parabreak", "Pagebreak" ]))
 
 
 def tokenise(text):
@@ -42,14 +50,13 @@ def tokenise(text):
             else:
                 tokens.append([s, TYPE_PUNC])
 
-
     def process_breaks(text):
         text_sections = regexp_breaks.split(text)
         for c, s in enumerate(text_sections):
             if c % 2:
                 tokens.append([s[:1], TYPE_LINEBREAK])
                 if len(s) > 1:
-                    tokens.append([s[1:], TYPE_PARABREAK])
+                    tokens[-1][1] |= TYPE_PARABREAK
             else:
                 tokens.append([s, TYPE_SPACE])
 
@@ -61,5 +68,6 @@ def tokenise(text):
             else:
                 process_words(s)
 
-    process_notes(text)
+    process_notes(text.rstrip())
+    tokens.append(["\n", TYPE_LINEBREAK|TYPE_PAGEBREAK])
     return [X for X in tokens if len(X[0])]
