@@ -7,7 +7,10 @@ import tokenise
 def dump_tokens(token_list, astext=False):
     outstr = ""
     if astext:
-        outstr = u"".join([t[0] for t in token_list])
+        for t in token_list:
+            outstr += t[0]
+            if t[1] & tokenise.TYPE_PAGEBREAK:
+                outstr += u"-----%s-----\n" % t[2]
     else:
         for t in token_list:
             k = [X for X in tokenise.token_description.keys() if (t[1] & X)]

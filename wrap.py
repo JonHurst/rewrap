@@ -12,6 +12,7 @@ acheive this if necessary."""
 import sys
 import os
 import difflib
+import glob
 import tokenise
 from common import split_paras, dump_tokens, sig, linebreak_to_space
 
@@ -145,11 +146,28 @@ def wrap_para(t_para, i_para):
 
 def main():
     global current_para
-    if len(sys.argv) != 3 or not os.path.isfile(sys.argv[1]) or not os.path.isfile(sys.argv[2]):
-        print "Usage: %s template_file input_file" % sys.argv[0]
+    if len(sys.argv) != 3 or not os.path.exists(sys.argv[1]) or not os.path.isfile(sys.argv[2]):
+        print "Usage: %s template_file_or_dir input_file" % sys.argv[0]
         sys.exit(-1)
     #process template file(s) into para list
-    t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
+    if os.path.isdir(sys.argv[1]):
+        filelist = glob.glob(sys.argv[1] + "/*")
+        if not filelist:
+            print "No files"
+            sys.exit(-2)
+        filelist.sort()
+        t_tokens = tokenise.tokenise(unicode(file(filelist[0]).read(), "utf-8"))
+        t_tokens[-1].append(filelist[0])
+        for f in filelist[1:]:
+            f_tokens = tokenise.tokenise(unicode(file(f).read(), "utf-8"))
+            if f_tokens[0][1] & tokenise.TYPE_LINEBREAK:
+                t_tokens[-1][1] |= tokenise.TYPE_PARABREAK
+                t_tokens += f_tokens[1:]
+            else:
+                t_tokens += f_tokens
+            t_tokens[-1].append(f)
+    else:
+        t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
     t_para_list = split_paras(t_tokens)
     #process input file into para list
     i_tokens = tokenise.tokenise(unicode(file(sys.argv[2]).read(), "utf-8"))
