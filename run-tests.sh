@@ -1,10 +1,19 @@
 #!/bin/bash
 
-echo "Matching paras test"
-./match_paras.py tests/matching/input tests/matching/template tests/matching/output
-diff -s tests/matching/expected-output tests/matching/output
-echo
+for X in matching missing multi-missing
+do
+    echo "------------------------------"
+    echo "${X} test"
+    echo "=============================="
+    ./match_paras.py tests/${X}/template tests/${X}/input
+    diff -s tests/${X}/input.paramatch tests/${X}/expected.paramatch
+    ./wrap.py tests/${X}/template tests/${X}/input.paramatch
+    diff -s tests/${X}/input.paramatch.wrap tests/${X}/expected.paramatch.wrap
+    echo "------------------------------"
+    echo
+done
 
+exit
 echo "Missing para test"
 ./match_paras.py tests/missing/input tests/missing/template tests/missing/output
 diff -s tests/missing/expected-output tests/missing/output
