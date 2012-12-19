@@ -9,7 +9,7 @@ def dump_tokens(token_list, astext=False):
     if astext:
         for t in token_list:
             outstr += t[0]
-            if t[1] & tokenise.TYPE_PAGEBREAK:
+            if (t[1] & tokenise.TYPE_PAGEBREAK) and len(t) == 3:
                 outstr += u"-----%s-----\n" % t[2]
     else:
         for t in token_list:
