@@ -1,0 +1,4 @@
+The second paragraph of the template has a substantial extra section,
+leaving template 2nd + 3rd about 86% commonality with input 1st. The
+split should just succeed, and the wrap should generate warnings
+regarding the lack of matching breaks due to the extra phrase.

@@ -1,0 +1,8 @@
+The short 3rd paragraph of template is split with half present at the
+end of the 2nd paragraph of the input and the other at the beginning of
+the 3rd paragraph. This is an unhandled case, leading to the third
+paragraph of the template being retained.
+
+The wrap generates a warning due to the additional material at the end
+of 2nd paragraph. An obvious long line at the start of the 4th paragraph
+is also an indicator.

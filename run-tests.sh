@@ -1,7 +1,8 @@
 #!/bin/bash
 
 TESTS="matching missing multi-missing extra multi-extra \
-moved changed join multi-join split split-and-join pg84-1"
+moved changed join multi-join split split-and-join pg84-1 pg84-2 \
+pg84-3"
 
 if [ $# -ge 1 ]
 then
