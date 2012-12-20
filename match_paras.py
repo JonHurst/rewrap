@@ -157,7 +157,8 @@ def process_matches(matches, t_para_list, i_para_list):
     for c, m in enumerate(matches):
         if len(m[1]) > 1:
             joined_para = []
-            print "[Info: Joining input paragraphs %s]" % ", ".join([str(X) for X in m[1]])
+            print "[Info: Joining input paras %s (template para %04d)]" % (
+                ", ".join(["%04d" % X for X in m[1]]), m[0][0])
             for ci in m[1]:
                 joined_para += i_para_list[ci][1:]
             joined_para.insert(0, sig(joined_para))
@@ -168,8 +169,8 @@ def process_matches(matches, t_para_list, i_para_list):
     for c, m in enumerate(matches):
         if len(m[0]) > 1:
             t_paras = []
-            print "[Info: Splitting input paragraph %04d based on template paragraphs %s]" % (
-                m[1][0], ", ".join([str(X) for X in m[0]]))
+            print "[Info: Splitting input para %04d (template paras %s)]" % (
+                m[1][0], ", ".join(["%04d" % X for X in m[0]]))
             for i in m[0]:
                 t_paras.append(t_para_list[i])
             split_paras = break_para(t_paras, i_para_list[m[1][0]])
@@ -218,7 +219,7 @@ def build_output(t_para_list, i_para_list, matches):
             outstrings.append(dump_tokens(i_para_list[outdict[c]][1:], True))
             i_count += len(i_para_list[outdict[c]][1:])
         else:
-            print "[Warning: Retaining template paragraph %04d]" % c
+            print "[Warning: Retaining template para %04d]" % c
             outstrings.append(dump_tokens(t_para_list[c][1:], True))
             t_count += len(t_para_list[c][1:])
     print "t_count:", t_count, "i_count:", i_count, "rep_rate:", str(i_count * 100 / (t_count + i_count)) + "%"
@@ -238,8 +239,8 @@ def main():
     #process token lists
     matches = build_match_list(t_para_list, i_para_list)
     matches = process_matches(matches, t_para_list, i_para_list)
-    for m in matches:
-        print "%04d = %04d : %3d%%" % (m[0][0], m[1][0], int(math.ceil(min(*m[2]) * 100)))
+    # for m in matches:
+    #     print "%04d = %04d : %3d%%" % (m[0][0], m[1][0], int(math.ceil(min(*m[2]) * 100)))
     output = build_output(t_para_list, i_para_list, matches)
     file(sys.argv[2] + ".paramatch", "w").write(output.encode("utf-8"))
 
