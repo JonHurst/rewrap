@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for X in matching missing multi-missing extra multi-extra moved
+for X in matching missing multi-missing extra multi-extra moved changed join multi-join
 do
     echo "------------------------------"
     echo "${X} test"
@@ -14,25 +14,7 @@ do
 done
 exit
 
-echo "Moved para test"
-./match_paras.py tests/moved/input tests/moved/template tests/moved/output
-diff -s tests/moved/expected-output tests/moved/output
-echo
-
-echo "Multiple moved paras test"
-./match_paras.py tests/multi-moved/input tests/multi-moved/template tests/multi-moved/output
-diff -s tests/multi-moved/expected-output tests/multi-moved/output
-echo
-
-echo "Large Change para test"
-./match_paras.py tests/changed/input tests/changed/template tests/changed/output
-diff -s tests/changed/expected-output tests/changed/output
-echo
-
-echo "Join two paras test"
-./match_paras.py tests/join/input tests/join/template tests/join/output
-diff -s tests/join/expected-output tests/join/output
-echo
+#not yet working: multi-moved
 
 echo "Join multiple paras test"
 ./match_paras.py tests/multi-join/input tests/multi-join/template tests/multi-join/output
