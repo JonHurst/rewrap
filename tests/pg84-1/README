@@ -1,0 +1,11 @@
+First and third paragraphs of input are good matches for first and fifth
+paragraphs in template. The second paragraph of the input is paragraphs
+two and three of the template plus a significantly altered version of
+paragraph four. Because of the significant differences in paragraph 4,
+the combination of 2 + 3 + 4 of the template is only an 82% match for
+paragraph 2 of the input.
+
+Potentially, input paragraph 2 could be split to give good matches for
+template paragraphs 2 and 3 and paragraph 4 could be retained from the
+template. Currently paragraphs 2, 3 and 4 are retained because the
+combination is an insufficiently good match.
