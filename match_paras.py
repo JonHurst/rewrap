@@ -27,17 +27,38 @@ import difflib
 import math
 import glob
 import os.path
-from common import split_paras, sig, dump_tokens, linebreak_to_space
-from wrap import wrap_para
+from common import dump_tokens, linebreak_to_space
+import wrap
 
 
 match_criteria = 0.85
 
 
+def sig(tokens):
+    """Makes a signature for a list of tokens by creating a frozen set consisting of all the words
+    lower-cased. This makes signatures quite robust across many of the normal edition differences
+    such as punctuation changes and case changes."""
+    t_applicable = [t for t in tokens if t[1] & (tokenise.TYPE_WORD | tokenise.TYPE_DIGIT)]
+    if not t_applicable:
+        return frozenset()
+    else:
+        return frozenset([t[0].lower() for t in t_applicable])
+
+
+def split_and_sign_paras(tokens):
+    """Split a list of tokens into a list of signed paragraphs of the form:
+    [[sig1, tok1.1, tok1.2...], [sig2, tok2.1, tok2.2, ...], ...]"""
+    unsigned_paras = wrap.split_paras(tokens)
+    signed_paras = []
+    for p in unsigned_paras:
+        signed_paras.append([sig(p)] + p)
+    return signed_paras
+
+
 def make_para_dict(para_list):
-    """Take a para_list (as output by common.split_paras) and create a dictionary with the para's sig as
-    key and the indexes of matching paras as value in the form [index1, ...]. The indexes will be in
-    document order."""
+    """Take a signed para_list (as output by split_and_sign_paras) and create a dictionary with the
+    para's sig as key and the indexes of matching paras as value in the form [index1, ...]. The
+    indexes will be in document order."""
     para_dict = {}
     for c, para_desc in enumerate(para_list):
         key = para_desc[0]
@@ -148,12 +169,12 @@ def break_para(t_paras, i_para):
         assert t_tokens[c - 1][1] & tokenise.TYPE_SPACE
         t_tokens[c - 1] = ["\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK]
     #wrap i_tokens using t_tokens
-    i_tokens = wrap_para(t_tokens, i_tokens)
+    i_tokens = wrap.wrap_para(t_tokens, i_tokens)
     #copy old linebreaks back into i_tokens
     for c, t in enumerate(i_oldtokens):
         if (t[1] & tokenise.TYPE_LINEBREAK) and (i_tokens[c][1] & tokenise.TYPE_SPACE):
             i_tokens[c] = t
-    return split_paras(i_tokens)
+    return split_and_sign_paras(i_tokens)
 
 
 
@@ -251,10 +272,10 @@ def main():
         sys.exit(-1)
     #process template file(s) into para list
     t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
-    t_para_list = split_paras(t_tokens)
+    t_para_list = split_and_sign_paras(t_tokens)
     #process input file into para list
     i_tokens = tokenise.tokenise(unicode(file(sys.argv[2]).read(), "utf-8"))
-    i_para_list = split_paras(i_tokens)
+    i_para_list = split_and_sign_paras(i_tokens)
     #process token lists
     matches = build_match_list(t_para_list, i_para_list)
     matches = process_matches(matches, t_para_list, i_para_list)
