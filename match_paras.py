@@ -1,15 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import tokenise
-import sys
-import difflib
-import math
-import glob
-import os.path
-from common import split_paras, sig, dump_tokens, linebreak_to_space
-from wrap import wrap_para
-
 """
 The purpose of match_para is to take two files consisting of a template file and an input file and
 output a file that has the same paragraph structure as the template file but as much content as
@@ -29,6 +20,16 @@ many corner cases in this aspect, so only those cases that can be processed with
 certainty are automated and warnings are generated for those where manual intervention will be
 required. In general, joining appears to be relatively robust but splitting often proves tricky.
 """
+
+import tokenise
+import sys
+import difflib
+import math
+import glob
+import os.path
+from common import split_paras, sig, dump_tokens, linebreak_to_space
+from wrap import wrap_para
+
 
 match_criteria = 0.85
 
@@ -64,7 +65,7 @@ def fuzzy_match_p(t_sig, i_sig):
     """Predicate function for determining whether two paragraphs probabalistically match. Returns
     False if it is unlikely that they match. Returns a tuple pair of the form:
        (template_match_probability, input_match_probability)
-    if it is likely that one signature is a subset of the other."""
+    if one signature is a near subset of the other."""
     intersection = t_sig & i_sig
     max_intersection_len = min(len(t_sig), len(i_sig))
     #match criteria is global set at the top of this file
