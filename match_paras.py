@@ -141,7 +141,7 @@ def process_matches(matches, t_para_list, i_para_list):
             print "[Info: Joining input paras %s (template para %04d)]" % (
                 ", ".join(["%04d" % X for X in m[1]]), m[0][0])
             for ci in m[1]:
-                joined_para += i_para_list[ci][1:]
+                joined_para += i_para_list[ci][1:-1] + [["\n", tokenise.TYPE_LINEBREAK]]
             joined_para.insert(0, sig(joined_para))
             i_para_list.append(joined_para)
             matches[c][1] = [len(i_para_list) - 1]
