@@ -74,13 +74,6 @@ def fuzzy_match_p(t_sig, i_sig):
     return (t_match, i_match)
 
 
-def build_candidate(paras, index_list):
-    candidate = []
-    for i in index_list:
-        candidate.append(paras[i])
-    return join_paras(candidate)
-
-
 def fuzzy_match_paras(t_paras, i_paras):
     """Find matches in the t_paras list and i_paras list. The sigs in these lists may be None if an
     exact matches have already been made. Returns a list of matches of the form:
@@ -96,6 +89,11 @@ def fuzzy_match_paras(t_paras, i_paras):
             if match_probs:
                 match_list.append([[ct], [ci], match_probs])
     #process joins and splits
+    def build_candidate(paras, index_list):
+        candidate = []
+        for i in index_list:
+            candidate.append(paras[i])
+        return join_paras(candidate)
     c = 0
     while c + 1 < len(match_list):
         #detect and process join case
