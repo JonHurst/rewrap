@@ -8,6 +8,7 @@ import math
 import glob
 import os.path
 from common import split_paras, sig, dump_tokens, linebreak_to_space
+from wrap import wrap_para
 
 match_criteria = 0.85
 
@@ -107,49 +108,29 @@ def join_paras(para_list):
 
 def break_para(t_paras, i_para):
     """Breaks i_para into a list of paras that approximately match those in the t_paras list"""
-    if len(t_paras) == 1: return [i_para] #recursive terminator
-    l_para = t_paras[0]
-    r_para = join_paras(t_paras[1:])
-    (i_para, l_para, r_para) = [X[1:] for X in (i_para, l_para, r_para)]
-    #calculate window size
-    length_dif = len(i_para) - len(l_para) - len(r_para)
-    if length_dif > 0:
-        window_start = int(0.8 * len(l_para))
-        window_end = int(1.2 * len(l_para)) + length_dif
-    else:
-        window_start = int(0.8 * len(l_para)) + length_dif #nb length_dif negative here
-        window_start = max(window_start, 0)
-        window_end = int(1.2 * len(l_para))
-    #set up sequences of tokens
-    i_para_seq = i_para[window_start:window_end]
-    linebreak_to_space(i_para_seq)
-    i_para_seq = [tuple(X) for X in i_para_seq]
-    t_para_seq = (l_para + r_para)[window_start:window_end]
-    linebreak_to_space(t_para_seq)
-    t_para_seq = [tuple(X) for X in t_para_seq]
-    #match sequence blocks
-    sm = difflib.SequenceMatcher(None, tuple(i_para_seq), tuple(t_para_seq), False)
-    mb = sm.get_matching_blocks()
-    #determine breakpoint
-    c = 0;
-    while mb[c][1] < len(l_para) - window_start: c += 1 #mb[c - 1] is now the last match block inside l_para
-    breakpoint = len(l_para) + mb[c - 1][0] - mb[c - 1][1]
-    if mb[c - 1][1] + mb[c - 1][2] + 1 < len(l_para) - window_start:
-        print "[Warning: Paragraph split occurred outside match block]"
-        error_tokens = i_para[max(0, breakpoint - 20):breakpoint]
-        print "=============================="
-        print dump_tokens(error_tokens, True).encode("utf-8")
-        print "------------------------------"
-        error_tokens = l_para[-20:]
-        print dump_tokens(error_tokens, True).encode("utf-8")
-        print "==============================\n"
-    retval = i_para[:breakpoint]
-    while retval and (retval[-1][1] & (tokenise.TYPE_SPACE | tokenise.TYPE_LINEBREAK)): del retval[-1]
-    retval.append(["\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK])
-    retval.insert(0, sig(retval))
-    rem = i_para[breakpoint:]
-    rem.insert(0, sig(rem))
-    return [retval] + break_para(t_paras[1:], rem) #recursive call
+    #normalise t_paras
+    t_normpara = join_paras(t_paras)
+    t_tokens = t_normpara[1:]
+    linebreak_to_space(t_tokens)
+    t_normpara[1:] = t_tokens
+    #normalise i_para
+    i_tokens = i_para[1:]
+    linebreak_to_space(i_tokens)
+    i_normpara = [i_para[0]] + i_tokens
+    #insert parabreak tokens into t_normpara
+    c = 1
+    for p in t_paras:
+        c += len(p) - 1
+        assert t_normpara[c - 1][1] & tokenise.TYPE_SPACE
+        t_normpara[c - 1] = ["\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK]
+    #wrap i_normpara using t_normpara
+    i_normpara = wrap_para(t_normpara, i_normpara)
+    #copy old linebreaks into i_normpara
+    for c, t in enumerate(i_para[1:]):
+        if (t[1] & tokenise.TYPE_LINEBREAK) and (i_normpara[c + 1][1] & tokenise.TYPE_SPACE):
+            i_normpara[c + 1] = t
+    return split_paras(i_normpara[1:])
+
 
 
 def process_matches(matches, t_para_list, i_para_list):
@@ -175,6 +156,7 @@ def process_matches(matches, t_para_list, i_para_list):
                 t_paras.append(t_para_list[i])
             split_paras = break_para(t_paras, i_para_list[m[1][0]])
             for d, i in enumerate(m[0]):
+                if d >= len(split_paras): break
                 i_para_list.append(split_paras[d])
                 match_prob = fuzzy_match_p(t_para_list[i][0], split_paras[d][0])
                 if match_prob and min(*match_prob) >= match_criteria:
