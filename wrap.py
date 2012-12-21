@@ -14,7 +14,7 @@ import os
 import difflib
 import glob
 import tokenise
-from common import split_paras, dump_tokens, sig, linebreak_to_space
+from common import dump_tokens, linebreak_to_space
 
 current_para = 0
 
@@ -22,12 +22,28 @@ def set_current_para(d):
     global current_para
     current_para = d
 
+
 def warning(s, t_shard=None, i_shard=None):
     print "[%04d Warning: %s]" % (current_para, s)
     if t_shard:
         print "    t:", dump_tokens(t_shard, True).encode("utf-8").replace("\n", "¶")
     if i_shard:
         print "    i:", dump_tokens(i_shard, True).encode("utf-8").replace("\n", "¶")
+
+
+def split_paras(tokens):
+    """Split a list of tokens into a list of paragraphs of the form:
+    [[tok1.1, tok1.2...], [tok2.1, tok2.2, ...], ...]"""
+    para_list = []
+    para = []
+    for t in tokens:
+        para.append(t)
+        if t[1] & tokenise.TYPE_PARABREAK:
+            para_list.append(para)
+            para = []
+    if para:
+        para_list.append(para)
+    return para_list
 
 
 def token_dict(tokens):
@@ -121,7 +137,7 @@ def merge_breaks(t_shard, i_shard):
 
 
 def wrap_para(t_para, i_para):
-    t_tokens, i_tokens = t_para[1:], i_para[1:]
+    t_tokens, i_tokens = t_para[:], i_para[:]
     o_tokens = []
     linebreak_to_space(i_tokens)
     matches = build_match_list(t_tokens, i_tokens)
@@ -140,7 +156,6 @@ def wrap_para(t_para, i_para):
     if o_tokens[-1][1] & tokenise.TYPE_SPACE:
         warning("Additional material after final linebreak", t_shard, i_shard)
         o_tokens[-1] = ("\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK)
-    o_tokens.insert(0, sig(o_tokens))
     return o_tokens
 
 
@@ -185,7 +200,7 @@ def main():
     outfile = open(sys.argv[2] + ".wrap", "w")
     for p in wrapped_paras:
         if not p: continue
-        outfile.write(dump_tokens(p[1:], True).encode("utf-8") + "\n")
+        outfile.write(dump_tokens(p, True).encode("utf-8") + "\n")
 
 
 if __name__ == "__main__":

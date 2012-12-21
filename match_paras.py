@@ -135,27 +135,25 @@ def join_paras(para_list):
 def break_para(t_paras, i_para):
     """Breaks i_para into a list of paras that approximately match those in the t_paras list"""
     #normalise t_paras
-    t_normpara = join_paras(t_paras)
-    t_tokens = t_normpara[1:]
+    t_tokens = join_paras(t_paras)[1:]
     linebreak_to_space(t_tokens)
-    t_normpara[1:] = t_tokens
     #normalise i_para
     i_tokens = i_para[1:]
+    i_oldtokens = i_tokens[:]
     linebreak_to_space(i_tokens)
-    i_normpara = [i_para[0]] + i_tokens
-    #insert parabreak tokens into t_normpara
-    c = 1
+    #insert parabreak tokens into t_tokens
+    c = 0
     for p in t_paras:
         c += len(p) - 1
-        assert t_normpara[c - 1][1] & tokenise.TYPE_SPACE
-        t_normpara[c - 1] = ["\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK]
-    #wrap i_normpara using t_normpara
-    i_normpara = wrap_para(t_normpara, i_normpara)
-    #copy old linebreaks into i_normpara
-    for c, t in enumerate(i_para[1:]):
-        if (t[1] & tokenise.TYPE_LINEBREAK) and (i_normpara[c + 1][1] & tokenise.TYPE_SPACE):
-            i_normpara[c + 1] = t
-    return split_paras(i_normpara[1:])
+        assert t_tokens[c - 1][1] & tokenise.TYPE_SPACE
+        t_tokens[c - 1] = ["\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK]
+    #wrap i_tokens using t_tokens
+    i_tokens = wrap_para(t_tokens, i_tokens)
+    #copy old linebreaks back into i_tokens
+    for c, t in enumerate(i_oldtokens):
+        if (t[1] & tokenise.TYPE_LINEBREAK) and (i_tokens[c][1] & tokenise.TYPE_SPACE):
+            i_tokens[c] = t
+    return split_paras(i_tokens)
 
 
 
