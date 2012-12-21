@@ -21,14 +21,14 @@ do
     then
         echo Paramatch: OK
     else
-        echo Paramatch: **** FAILED ****
+        echo "Paramatch: **** FAILED ****"
     fi
     diff -q tests/${X}/input.paramatch.wrap tests/${X}/expected.paramatch.wrap
     if [ $? -eq 0 ]
     then
         echo Wrap: OK
     else
-        echo Wrap: **** FAILED ****
+        echo "Wrap: **** FAILED ****"
     fi
     echo "------------------------------"
     echo
