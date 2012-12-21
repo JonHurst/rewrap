@@ -10,6 +10,26 @@ import os.path
 from common import split_paras, sig, dump_tokens, linebreak_to_space
 from wrap import wrap_para
 
+"""
+The purpose of match_para is to take two files consisting of a template file and an input file and
+output a file that has the same paragraph structure as the template file but as much content as
+possible from the input file.
+
+Matching of paragraphs is achieved by comparing paragraph signatures. A signature is a set
+consisting of the paragraph's words converted to lowercase plus any digits it may contain. Thus the
+signature is unaffected by differences in spacing, punctuation, line breaking or capitalisation.
+
+The process is to first find exactly matching signatures and use these to break the files into
+subsections. Matching subsections are then compared more closely to find paragraphs that are near
+matches. The global variable match_criteria defines what is "close enough" to be considered a near
+match.
+
+An attempt is also made to deal with paragraphs that have either been split or joined. There are
+many corner cases in this aspect, so only those cases that can be processed with reasonable
+certainty are automated and warnings are generated for those where manual intervention will be
+required. In general, joining appears to be relatively robust but splitting often proves tricky.
+"""
+
 match_criteria = 0.85
 
 
@@ -41,6 +61,10 @@ def match_paras(para_list_1, para_list_2):
 
 
 def fuzzy_match_p(t_sig, i_sig):
+    """Predicate function for determining whether two paragraphs probabalistically match. Returns
+    False if it is unlikely that they match. Returns a tuple pair of the form:
+       (template_match_probability, input_match_probability)
+    if it is likely that one signature is a subset of the other."""
     intersection = t_sig & i_sig
     max_intersection_len = min(len(t_sig), len(i_sig))
     #match criteria is global set at the top of this file
@@ -59,7 +83,10 @@ def build_candidate(paras, index_list):
 
 def fuzzy_match_paras(t_paras, i_paras):
     """Find matches in the t_paras list and i_paras list. The sigs in these lists may be None if an
-    exact matches have already been made."""
+    exact matches have already been made. Returns a list of matches of the form:
+      [[[t_para_index, ...], [i_para_index, ...], (t_match_prob, i_match_prob)], ...].
+    Multiple t_para_indexes indicate the input paragraph requires splitting, multiple i_para_indexes
+    indicates the input paragraph requires joining."""
     match_list = []
     for ct, pt in enumerate(t_paras):
         if not pt[0]: continue
@@ -134,6 +161,10 @@ def break_para(t_paras, i_para):
 
 
 def process_matches(matches, t_para_list, i_para_list):
+    """Processes the joins and splits indicated by a match list of the form output by
+    build_match_list into a simpler form where each index list contains only one index, i.e. it
+    produces a 1-to-1 mapping of template paragraphs to input paragraphs. Split and joined
+    paragraphs are appended to i_para_list as necessary."""
     #modify i_para_list and matches for joins
     for c, m in enumerate(matches):
         if len(m[1]) > 1:
@@ -169,6 +200,8 @@ def process_matches(matches, t_para_list, i_para_list):
 
 
 def build_match_list(t_para_list, i_para_list):
+    """Takes two lists of paragraphs and calculates a match list of the form:
+      [[[t_para_index, ...], [i_para_index, ...], (t_match_prob, i_match_prob)], ...]"""
     exact_matches = match_paras(t_para_list, i_para_list)
     matches = []
     for start, end in zip([[-1, -1]] + exact_matches,
@@ -189,6 +222,11 @@ def build_match_list(t_para_list, i_para_list):
 
 
 def build_output(t_para_list, i_para_list, matches):
+    """Takes the simplified match list produced by process_matches plus the template paragraph list
+    and modified input paragraph list and builds an output string. Where a match exists between a
+    template paragraph and an input paragraph, the input paragraph is output; otherwise the template
+    paragraph is retained and a warning issued. This function also calcultates the usage rates of
+    template and input tokens."""
     outdict = {}
     for m in matches:
         if not outdict.has_key(m[0][0]):#chooses first match if multiples
@@ -209,6 +247,8 @@ def build_output(t_para_list, i_para_list, matches):
 
 
 def main():
+    """Loads the template and input files and processes them into an output file. The output file
+    will have the same name as the input file with ".paramatch" appended."""
     if len(sys.argv) != 3 or not os.path.isfile(sys.argv[1]) or not os.path.isfile(sys.argv[2]):
         print "Usage: %s template_file input_file" % sys.argv[0]
         sys.exit(-1)
