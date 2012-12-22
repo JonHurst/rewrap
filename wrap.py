@@ -64,7 +64,7 @@ def build_match_list(t_tokens, i_tokens):
     i_token_dict = token_dict(i_tokens)
     for c, t in enumerate(t_tokens):
         key = t[0].lower()
-        if t_token_dict.get(key) and i_token_dict.get(key):
+        if t_token_dict.get(key) != None and i_token_dict.get(key) != None:
             matches.append([c, i_token_dict[key]])
     #ensure matches monotonically increases in both fields
     c = 1
