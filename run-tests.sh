@@ -14,6 +14,7 @@ do
     echo "------------------------------"
     echo "${X} test"
     echo "=============================="
+    rm tests/${X}/input.paramatch*
     ./match_paras.py tests/${X}/template tests/${X}/input
     ./wrap.py tests/${X}/template tests/${X}/input.paramatch
     diff -q tests/${X}/input.paramatch tests/${X}/expected.paramatch
