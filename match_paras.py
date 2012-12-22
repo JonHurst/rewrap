@@ -243,22 +243,24 @@ def build_output(t_para_list, i_para_list, matches):
     """Takes the simplified match list produced by process_matches plus the template paragraph list
     and modified input paragraph list and builds an output string. Where a match exists between a
     template paragraph and an input paragraph, the input paragraph is output; otherwise the template
-    paragraph is retained and a warning issued. This function also calcultates the usage rates of
+    paragraph is retained and a warning issued. This function also calculates the usage rates of
     template and input tokens."""
     outdict = {}
     for m in matches:
         if not outdict.has_key(m[0][0]):#chooses first match if multiples
             outdict[m[0][0]] = m[1][0]
     outstrings = []
+    def add_output_para(tokens):
+        outstrings.append("".join([X[0] for X in tokens]))
     t_count, i_count = 0, 0
     for c in range(0, len(t_para_list)):
         desc = str(c)
         if outdict.has_key(c):
-            outstrings.append(dump_tokens(i_para_list[outdict[c]][1:], True))
+            add_output_para(i_para_list[outdict[c]][1:])
             i_count += len(i_para_list[outdict[c]][1:])
         else:
             print "[Warning: Retaining template para %04d]" % c
-            outstrings.append(dump_tokens(t_para_list[c][1:], True))
+            add_output_para(t_para_list[c][1:])
             t_count += len(t_para_list[c][1:])
     print "t_count:", t_count, "i_count:", i_count, "rep_rate:", str(i_count * 100 / (t_count + i_count)) + "%"
     return "\n".join(outstrings)

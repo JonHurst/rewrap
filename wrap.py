@@ -160,6 +160,18 @@ def wrap_para(t_para, i_para):
     return o_tokens
 
 
+def build_output(wrapped_paras):
+    outstrings = []
+    for p in wrapped_paras:
+        if not p: continue
+        outstrings.append("")
+        for t in p:
+            outstrings[-1] += t[0]
+            if (t[1] & tokenise.TYPE_PAGEBREAK) and len(t) == 3:
+                outstrings[-1] += u"=====#%s#=====\n" % t[2]
+    return "\n".join(outstrings)
+
+
 def main():
     global current_para
     if len(sys.argv) != 3 or not os.path.exists(sys.argv[1]) or not os.path.isfile(sys.argv[2]):
@@ -200,9 +212,7 @@ def main():
         else:
             wrapped_paras.append(i_para)
     outfile = open(sys.argv[2] + ".wrap", "w")
-    for p in wrapped_paras:
-        if not p: continue
-        outfile.write(dump_tokens(p, True).encode("utf-8") + "\n")
+    outfile.write(build_output(wrapped_paras).encode("utf-8"))
 
 
 if __name__ == "__main__":
