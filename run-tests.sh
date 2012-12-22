@@ -2,7 +2,7 @@
 
 TESTS="matching missing multi-missing extra multi-extra \
 moved changed join multi-join split split-and-join pg84-1 pg84-2 \
-pg84-3"
+pg84-3 multi-page"
 
 if [ $# -ge 1 ]
 then
