@@ -144,7 +144,8 @@ def wrap_para(t_para, i_para):
     #handle shards before first match
     if not matches: return i_para
     t_shard = t_tokens[:matches[0][0]]
-    if t_shard:
+    i_shard = i_tokens[:matches[0][1]]
+    if t_shard or i_shard:
         i_shard = i_tokens[0:matches[0][1]]
         o_tokens = merge_breaks(t_shard, i_shard)
     for start, end in zip(matches, matches[1:] + [[len(t_tokens), len(i_tokens)]]):
