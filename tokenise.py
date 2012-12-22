@@ -25,6 +25,7 @@ def tokenise(text):
     regexp_digits = re.compile(r"([\d]+)", re.UNICODE)
     regexp_breaks = re.compile(r"(\n+)", re.UNICODE)
     regexp_whitespace = re.compile(r"([\s]+)", re.UNICODE)
+    regexp_pagebreaks = re.compile(r"\n=====#([\d]+)#=====", re.UNICODE)
 
     def process_digits(text):
         text_sections = regexp_digits.split(text)
@@ -68,6 +69,24 @@ def tokenise(text):
             else:
                 process_words(s)
 
-    process_notes(text.rstrip())
-    tokens.append(["\n", TYPE_LINEBREAK|TYPE_PAGEBREAK])
-    return [X for X in tokens if len(X[0])]
+    def process_pagebreaks(text):
+        text_sections = regexp_pagebreaks.split(text)
+        for c, s in enumerate(text_sections):
+            if c % 2:
+                tokens.append([s, TYPE_PAGEBREAK])
+            else:
+                process_notes(s)
+
+    process_pagebreaks(text.rstrip())
+
+    tokens = ([X for X in tokens if len(X[0])] +
+              [["\n", TYPE_LINEBREAK|TYPE_PAGEBREAK]])
+    #merge pagebreaks into following linebreak
+    c = 0
+    while c + 1 < len(tokens):
+        if (tokens[c][1] & TYPE_PAGEBREAK):
+            tokens[c + 1][1] |= TYPE_PAGEBREAK
+            tokens[c + 1].append(tokens[c][0])
+            del tokens[c]
+        c += 1
+    return tokens
