@@ -188,7 +188,8 @@ def main():
     i_tokens = tokenise.tokenise(unicode(file(sys.argv[2]).read(), "utf-8"))
     i_para_list = split_paras(i_tokens)
     if len(t_para_list) != len(i_para_list):
-        print "Number of paragraph template and input differ"
+        print "Number of paragraphs\n template: %s\n input: %s" % (
+            len(t_para_list), len(i_para_list))
         sys.exit(-2)
     wrapped_paras = []
     for c, (t_para, i_para) in enumerate(zip(t_para_list, i_para_list)):
