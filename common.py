@@ -10,7 +10,7 @@ def dump_tokens(token_list, astext=False):
         for t in token_list:
             outstr += t[0]
             if (t[1] & tokenise.TYPE_PAGEBREAK) and len(t) == 3:
-                outstr += u"-----%s-----\n" % t[2]
+                outstr += u"=====#%s#=====\n" % t[2]
     else:
         for t in token_list:
             k = [X for X in tokenise.token_description.keys() if (t[1] & X)]
