@@ -175,7 +175,7 @@ def build_output(wrapped_paras):
 def main():
     global current_para
     if len(sys.argv) != 3 or not os.path.isfile(sys.argv[1]) or not os.path.isfile(sys.argv[2]):
-        print "Usage: %s template_file_or_dir input_file" % sys.argv[0]
+        print "Usage: %s template_file input_file" % sys.argv[0]
         sys.exit(-1)
     #process template file(s) into para list
     t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
