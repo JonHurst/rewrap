@@ -17,6 +17,7 @@ token_description = dict(zip(
      "Space", "Punctuation", "Note",
      "Linebreak", "Parabreak", "Pagebreak" ]))
 
+pending_pagebreak = None
 
 def tokenise(text):
     tokens = []
@@ -52,10 +53,15 @@ def tokenise(text):
                 tokens.append([s, TYPE_PUNC])
 
     def process_breaks(text):
+        global pending_pagebreak
         text_sections = regexp_breaks.split(text)
         for c, s in enumerate(text_sections):
             if c % 2:
-                tokens.append([s[:1], TYPE_LINEBREAK])
+                if pending_pagebreak:
+                    tokens.append([s[:1], TYPE_LINEBREAK|TYPE_PAGEBREAK, pending_pagebreak])
+                    pending_pagebreak = None
+                else:
+                    tokens.append([s[:1], TYPE_LINEBREAK])
                 if len(s) > 1:
                     tokens[-1][1] |= TYPE_PARABREAK
             else:
@@ -70,23 +76,17 @@ def tokenise(text):
                 process_words(s)
 
     def process_pagebreaks(text):
+        global pending_pagebreak
         text_sections = regexp_pagebreaks.split(text)
         for c, s in enumerate(text_sections):
             if c % 2:
-                tokens.append([s, TYPE_PAGEBREAK])
+                pending_pagebreak = s
             else:
                 process_notes(s)
 
     process_pagebreaks(text.rstrip())
-
-    tokens = ([X for X in tokens if len(X[0])] +
-              [["\n", TYPE_LINEBREAK|TYPE_PAGEBREAK]])
-    #merge pagebreaks into following linebreak
-    c = 0
-    while c + 1 < len(tokens):
-        if (tokens[c][1] & TYPE_PAGEBREAK):
-            tokens[c + 1][1] |= TYPE_PAGEBREAK
-            tokens[c + 1].append(tokens[c][0])
-            del tokens[c]
-        c += 1
-    return tokens
+    if pending_pagebreak:
+        final_break = ["\n", TYPE_LINEBREAK|TYPE_PAGEBREAK, pending_pagebreak]
+    else:
+        final_break = ["\n", TYPE_LINEBREAK]
+    return [X for X in tokens if len(X[0])] + [final_break]
