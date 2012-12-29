@@ -153,7 +153,7 @@ def join_paras(para_list):
     return para
 
 
-def break_para(t_paras, i_para):
+def break_para(t_paras, i_para, logger):
     """Breaks i_para into a list of paras that approximately match those in the t_paras list"""
     #normalise t_paras
     t_tokens = join_paras(t_paras)[1:]
@@ -169,7 +169,7 @@ def break_para(t_paras, i_para):
         assert t_tokens[c - 1][1] & tokenise.TYPE_SPACE
         t_tokens[c - 1] = ["\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK]
     #wrap i_tokens using t_tokens
-    i_tokens = wrap.wrap_para(t_tokens, i_tokens)
+    i_tokens = wrap.wrap_para(t_tokens, i_tokens, logger)
     #copy old linebreaks back into i_tokens
     for c, t in enumerate(i_oldtokens):
         if (t[1] & tokenise.TYPE_LINEBREAK) and (i_tokens[c][1] & tokenise.TYPE_SPACE):
@@ -178,7 +178,7 @@ def break_para(t_paras, i_para):
 
 
 
-def process_matches(matches, t_para_list, i_para_list):
+def process_matches(matches, t_para_list, i_para_list, logger):
     """Processes the joins and splits indicated by a match list of the form output by
     build_match_list into a simpler form where each index list contains only one index, i.e. it
     produces a 1-to-1 mapping of template paragraphs to input paragraphs. Split and joined
@@ -187,8 +187,9 @@ def process_matches(matches, t_para_list, i_para_list):
     for c, m in enumerate(matches):
         if len(m[1]) > 1:
             joined_para = []
-            print "[Info: Joining input paras %s (template para %04d)]" % (
-                ", ".join(["%04d" % X for X in m[1]]), m[0][0])
+            logger.set_current_para(m[0][0], m[1][0])
+            logger.message("Info: Joining input paras %s" % (
+                    ", ".join(["%04d" % X for X in m[1]])))
             for ci in m[1]:
                 joined_para += i_para_list[ci][1:-1] + [["\n", tokenise.TYPE_LINEBREAK]]
             joined_para.insert(0, sig(joined_para))
@@ -199,11 +200,12 @@ def process_matches(matches, t_para_list, i_para_list):
     for c, m in enumerate(matches):
         if len(m[0]) > 1:
             t_paras = []
-            print "[Info: Splitting input para %04d (template paras %s)]" % (
-                m[1][0], ", ".join(["%04d" % X for X in m[0]]))
+            logger.set_current_para(m[0][0], m[1][0])
+            logger.message("Info: Splitting input para (template paras %s)]" % (
+                    ", ".join(["%04d" % X for X in m[0]])))
             for i in m[0]:
                 t_paras.append(t_para_list[i])
-            split_paras = break_para(t_paras, i_para_list[m[1][0]])
+            split_paras = break_para(t_paras, i_para_list[m[1][0]], logger)
             for d, i in enumerate(m[0]):
                 if d >= len(split_paras): break
                 i_para_list.append(split_paras[d])
@@ -239,7 +241,7 @@ def build_match_list(t_para_list, i_para_list):
     return matches
 
 
-def build_output(t_para_list, i_para_list, matches):
+def build_output(t_para_list, i_para_list, matches, logger):
     """Takes the simplified match list produced by process_matches plus the template paragraph list
     and modified input paragraph list and builds an output string. Where a match exists between a
     template paragraph and an input paragraph, the input paragraph is output; otherwise the template
@@ -259,7 +261,8 @@ def build_output(t_para_list, i_para_list, matches):
             add_output_para(i_para_list[outdict[c]][1:])
             i_count += len(i_para_list[outdict[c]][1:])
         else:
-            print "[Warning: Retaining template para %04d]" % c
+            logger.set_current_para(c)
+            logger.message("Warning: Retaining template para")
             add_output_para(t_para_list[c][1:])
             t_count += len(t_para_list[c][1:])
     print "t_count:", t_count, "i_count:", i_count, "rep_rate:", str(i_count * 100 / (t_count + i_count)) + "%"
@@ -273,17 +276,20 @@ def main():
         print "Usage: %s template_file input_file" % sys.argv[0]
         sys.exit(-1)
     #process template file(s) into para list
-    t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
+    t_string = unicode(file(sys.argv[1]).read(), "utf-8")
+    t_tokens = tokenise.tokenise(t_string)
     t_para_list = split_and_sign_paras(t_tokens)
     #process input file into para list
-    i_tokens = tokenise.tokenise(unicode(file(sys.argv[2]).read(), "utf-8"))
+    i_string = unicode(file(sys.argv[2]).read(), "utf-8")
+    i_tokens = tokenise.tokenise(i_string)
     i_para_list = split_and_sign_paras(i_tokens)
     #process token lists
+    logger = wrap.Logger(t_string, i_string)
     matches = build_match_list(t_para_list, i_para_list)
-    matches = process_matches(matches, t_para_list, i_para_list)
+    matches = process_matches(matches, t_para_list, i_para_list, logger)
     # for m in matches:
     #     print "%04d = %04d : %3d%%" % (m[0][0], m[1][0], int(math.ceil(min(*m[2]) * 100)))
-    output = build_output(t_para_list, i_para_list, matches)
+    output = build_output(t_para_list, i_para_list, matches, logger)
     file(sys.argv[2] + ".paramatch", "w").write(output.encode("utf-8"))
 
 

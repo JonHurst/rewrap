@@ -16,19 +16,49 @@ import glob
 import tokenise
 from common import dump_tokens, linebreak_to_space
 
-current_para = 0
+class Logger:
 
-def set_current_para(d):
-    global current_para
-    current_para = d
+    def __init__(self, template_string, input_string):
+        self.template_para = None
+        self.input_para = None
+        self.template_line_dict = self.__build_line_dict(template_string)
+        self.input_line_dict = self.__build_line_dict(input_string)
 
 
-def warning(s, t_shard=None, i_shard=None):
-    print "[%04d Warning: %s]" % (current_para, s)
-    if t_shard:
-        print "    t:", dump_tokens(t_shard, True).encode("utf-8").replace("\n", "¶")
-    if i_shard:
-        print "    i:", dump_tokens(i_shard, True).encode("utf-8").replace("\n", "¶")
+    def __build_line_dict(self, s):
+        d = {}
+        in_para = False
+        para_count = 0
+        for c, l in enumerate(s.splitlines()):
+            if len(l):
+                if not in_para:
+                    in_para = True
+                    d[para_count] = c
+                    para_count += 1
+            else:
+                in_para = False
+        return d
+
+
+    def set_current_para(self, template_para, input_para=None):
+        self.template_para = template_para
+        self.input_para = input_para
+
+
+    def message(self, s, t_shard=None, i_shard=None):
+        t_para_str = ""
+        if self.template_para != None:
+            t_para_str = "t:%04d(%05d) " % (
+                self.template_para, self.template_line_dict.get(self.template_para, 99999))
+        i_para_str = ""
+        if self.input_para != None :
+            i_para_str = "i:%04d(%05d) " % (
+                self.input_para, self.input_line_dict.get(self.input_para, 99999))
+        print "[", t_para_str + i_para_str + s, "]"
+        if t_shard:
+            print "    t:", dump_tokens(t_shard, True).encode("utf-8").replace("\n", "¶")
+        if i_shard:
+            print "    i:", dump_tokens(i_shard, True).encode("utf-8").replace("\n", "¶")
 
 
 def split_paras(tokens):
@@ -88,7 +118,7 @@ def build_match_list(t_tokens, i_tokens):
     return matches
 
 
-def merge_breaks(t_shard, i_shard):
+def merge_breaks(t_shard, i_shard, logger):
     #if there are no line breaks in the shard, just return the i_shard
     if not [X for X in t_shard if X[1] & tokenise.TYPE_LINEBREAK]:
         return i_shard
@@ -108,7 +138,7 @@ def merge_breaks(t_shard, i_shard):
         mb = sm.get_matching_blocks()
         if len(mb) == 1:
             #no match in shards
-            warning("No matches", t_shard, i_shard)
+            logger.message("Warning: No matches", t_shard, i_shard)
             return i_shard
         for ct, t in enumerate(t_shard):
             if t[1] & tokenise.TYPE_LINEBREAK:
@@ -119,7 +149,7 @@ def merge_breaks(t_shard, i_shard):
                     if ct == 0 and (i_shard[0][1] & tokenise.TYPE_SPACE):
                         i_shard[0] = t
                     else:
-                        warning("No candidate space", t_shard, i_shard)
+                        logger.message("Warning: No candidate space", t_shard, i_shard)
                 elif mb[cm - 1][0] + mb[cm - 1][2] > ct:
                     #break occured inside prev matchblock
                     i_shard[ct + mb[cm - 1][1] - mb[cm - 1][0]] = t
@@ -129,14 +159,14 @@ def merge_breaks(t_shard, i_shard):
                     if i_shard[candidate][1] & tokenise.TYPE_SPACE:
                         i_shard[candidate] = t
                     else:
-                        warning("No candidate space", t_shard, i_shard)
+                        logger.message("Warning: No candidate space", t_shard, i_shard)
                 else:
                     #match occurred outside matchblock
-                    warning("Break outside match block", t_shard, i_shard)
+                    logger.message("Warning: Break outside match block", t_shard, i_shard)
     return i_shard
 
 
-def wrap_para(t_para, i_para):
+def wrap_para(t_para, i_para, logger):
     t_tokens, i_tokens = t_para[:], i_para[:]
     o_tokens = []
     linebreak_to_space(i_tokens)
@@ -147,15 +177,15 @@ def wrap_para(t_para, i_para):
     i_shard = i_tokens[:matches[0][1]]
     if t_shard or i_shard:
         i_shard = i_tokens[0:matches[0][1]]
-        o_tokens = merge_breaks(t_shard, i_shard)
+        o_tokens = merge_breaks(t_shard, i_shard, logger)
     for start, end in zip(matches, matches[1:] + [[len(t_tokens), len(i_tokens)]]):
         o_tokens.append(i_tokens[start[1]])
         t_shard = t_tokens[start[0] + 1:end[0]]
         if t_shard:
             i_shard = i_tokens[start[1] + 1:end[1]]
-            o_tokens += merge_breaks(t_shard, i_shard)
+            o_tokens += merge_breaks(t_shard, i_shard, logger)
     if o_tokens[-1][1] & tokenise.TYPE_SPACE:
-        warning("Additional material after final linebreak", t_shard, i_shard)
+        logger.message("Warning: Additional material after final linebreak", t_shard, i_shard)
         o_tokens[-1] = ("\n", tokenise.TYPE_LINEBREAK | tokenise.TYPE_PARABREAK)
     return o_tokens
 
@@ -173,25 +203,29 @@ def build_output(wrapped_paras):
 
 
 def main():
-    global current_para
     if len(sys.argv) != 3 or not os.path.isfile(sys.argv[1]) or not os.path.isfile(sys.argv[2]):
         print "Usage: %s template_file input_file" % sys.argv[0]
         sys.exit(-1)
     #process template file(s) into para list
-    t_tokens = tokenise.tokenise(unicode(file(sys.argv[1]).read(), "utf-8"))
+    t_string = unicode(file(sys.argv[1]).read(), "utf-8")
+    t_tokens = tokenise.tokenise(t_string)
     t_para_list = split_paras(t_tokens)
     #process input file into para list
-    i_tokens = tokenise.tokenise(unicode(file(sys.argv[2]).read(), "utf-8"))
+    i_string = unicode(file(sys.argv[2]).read(), "utf-8")
+    i_tokens = tokenise.tokenise(i_string)
     i_para_list = split_paras(i_tokens)
+    #sanity check -- must be the same number of paras in template and input
     if len(t_para_list) != len(i_para_list):
         print "Number of paragraphs\n template: %s\n input: %s" % (
             len(t_para_list), len(i_para_list))
         sys.exit(-2)
+    #initialise logger
+    logger = Logger(t_string, i_string)
     wrapped_paras = []
     for c, (t_para, i_para) in enumerate(zip(t_para_list, i_para_list)):
-        set_current_para(c)
+        logger.set_current_para(c, c)
         if t_para != i_para:
-            wrapped_paras.append(wrap_para(t_para, i_para))
+            wrapped_paras.append(wrap_para(t_para, i_para, logger))
         else:
             wrapped_paras.append(i_para)
     outfile = open(sys.argv[2] + ".wrap", "w")
