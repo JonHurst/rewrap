@@ -30,10 +30,10 @@ class Logger:
         in_para = False
         para_count = 0
         for c, l in enumerate(s.splitlines()):
-            if len(l):
+            if len(l.rstrip()):
                 if not in_para:
                     in_para = True
-                    d[para_count] = c
+                    d[para_count] = c + 1
                     para_count += 1
             else:
                 in_para = False
@@ -48,13 +48,13 @@ class Logger:
     def message(self, s, t_shard=None, i_shard=None):
         t_para_str = ""
         if self.template_para != None:
-            t_para_str = "t:%04d(%05d) " % (
+            t_para_str = " t:%04d(%05d)" % (
                 self.template_para, self.template_line_dict.get(self.template_para, 99999))
         i_para_str = ""
         if self.input_para != None :
-            i_para_str = "i:%04d(%05d) " % (
+            i_para_str = " i:%04d(%05d)" % (
                 self.input_para, self.input_line_dict.get(self.input_para, 99999))
-        print "[", t_para_str + i_para_str + s, "]"
+        print "[", s + t_para_str + i_para_str, "]"
         if t_shard:
             print "    t:", dump_tokens(t_shard, True).encode("utf-8").replace("\n", "¶")
         if i_shard:

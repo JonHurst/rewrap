@@ -201,7 +201,7 @@ def process_matches(matches, t_para_list, i_para_list, logger):
         if len(m[0]) > 1:
             t_paras = []
             logger.set_current_para(m[0][0], m[1][0])
-            logger.message("Info: Splitting input para (template paras %s)]" % (
+            logger.message("Info: Splitting input para (template paras %s)" % (
                     ", ".join(["%04d" % X for X in m[0]])))
             for i in m[0]:
                 t_paras.append(t_para_list[i])
