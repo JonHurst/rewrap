@@ -262,7 +262,10 @@ def build_output(t_para_list, i_para_list, matches, logger):
             i_count += len(i_para_list[outdict[c]][1:])
         else:
             logger.set_current_para(c)
-            logger.message("Warning: Retaining template para")
+            shard = t_para_list[c][1:16]
+            if len(shard) == 15:
+                shard[14] = [u"…", tokenise.TYPE_PUNC]
+            logger.message("Warning: Retaining template para", shard)
             add_output_para(t_para_list[c][1:])
             t_count += len(t_para_list[c][1:])
     print "t_count:", t_count, "i_count:", i_count, "rep_rate:", str(i_count * 100 / (t_count + i_count)) + "%"
