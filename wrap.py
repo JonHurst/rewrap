@@ -158,6 +158,10 @@ def merge_breaks(t_shard, i_shard, logger):
                     candidate = mb[cm][1] - 1
                     if i_shard[candidate][1] & tokenise.TYPE_SPACE:
                         i_shard[candidate] = t
+                    elif i_shard[candidate][0] == "-":
+                        #line is broken at hyphen
+                        i_shard[candidate] = t
+                        i_shard[candidate][0] = "-" + i_shard[candidate][0]
                     else:
                         logger.message("Warning: No candidate space", t_shard, i_shard)
                 else:
